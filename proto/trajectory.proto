@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package trajectory;
+
+enum TrajectoryMode {
+  TrajectoryModeNone                  = 0;
+  TrajectoryModePortrait              = 1; // Fly Back Shot
+  TrajectoryModeHover                 = 2;
+  TrajectoryModeOrbit                 = 3;
+  TrajectoryModeFollow                = 4;
+}
+
+message TrajectoryParamsPortrait {
+  float distance                      = 1; // increments: 0.1m
+  float outwards_speed                = 2; // increments: 0.1m/s
+  float return_speed                  = 3; // increments: 0.1m/s
+  float height_offset                 = 4; // increments: 0.01m
+  float outwards_ramp                 = 5;
+  float return_ramp                   = 6;
+}
+
+message TrajectoryParamsHover {
+  uint32 duration                     = 1; // increments: 1s
+  float height_offset                 = 2; // increments: 0.01m
+}
+
+message TrajectoryParamsOrbit {
+  float radius                        = 1; // unit: m, increments: 0.1m
+  uint32 time_one_circle              = 2; // the need time for one circle
+  uint32 circle_num                   = 3; // circle number
+}
+
+message TrajectoryParamsFollow {
+  float distance                      = 1; // increments: 0.1m, the follow distance
+  uint32 max_time                     = 2; // increments: 1s, the max follow time
+}
+
+message TrajectoryParams {
+  oneof type {
+    TrajectoryParamsHover hover         = 1;
+    TrajectoryParamsPortrait portrait   = 2; // portrait / fly back shot
+    TrajectoryParamsOrbit orbit         = 3;
+    TrajectoryParamsFollow follow       = 4;
+  }
+}
+

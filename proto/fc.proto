@@ -1,0 +1,441 @@
+syntax = "proto3";
+
+package flight;
+
+import "base.proto";
+
+enum FlightControlFlightState {
+  FLIGHT_CONTROL_STATE_DISARM                  = 0;
+  FLIGHT_CONTROL_STATE_ARM                     = 1;
+  FLIGHT_CONTROL_STATE_TAKEING_OFF             = 2;
+  FLIGHT_CONTROL_STATE_FLYING                  = 3;
+  FLIGHT_CONTROL_STATE_LANDING                 = 4;
+  FLIGHT_CONTROL_STATE_PREPARE_TO_HAND_RELEASE = 5;
+}
+
+enum HorizontalNavigationAbility {
+  FC_HORIZONTAL_NAVIGATION_ABILITY_ACCURATE_POSITION_VALID = 0;
+  FC_HORIZONTAL_NAVIGATION_ABILITY_POSITION_VALID          = 1;
+  FC_HORIZONTAL_NAVIGATION_ABILITY_VELOCITY_VALID          = 2;
+  FC_HORIZONTAL_NAVIGATION_ABILITY_ATTITUDE_VALID          = 3;
+  FC_HORIZONTAL_NAVIGATION_ABILITY_FAILED                  = 4;
+}
+
+enum VerticalNavigationAbility {
+  FC_VERTICAL_NAVIGATION_ABILITY_ACCURATE_HEIGHT_VALID = 0;
+  FC_VERTICAL_NAVIGATION_ABILITY_ALITITUDE_VALID       = 1;
+  FC_VERTICAL_NAVIGATION_ABILITY_FAILED                = 2;
+}
+
+enum YawNavigationAbility {
+  FC_YAW_NAVIGATION_ABILITY_TRUE_NORTH_VALID           = 0;
+  FC_YAW_NAVIGATION_ABILITY_ANGULAR_VELOCITY_VALID     = 1;
+  FC_YAW_NAVIGATION_ABILITY_FAILED                     = 2;
+}
+
+enum BrakeStatus{
+  FC_STATUS_NORMAL_FLYING = 0;
+  FC_STATUS_FINISIH_BRAKE = 1;
+  FC_STATUS_NORMAL_BRAKE_ON = 2;
+  FC_STATUS_EMERGENCY_BRAKE_ON = 3;
+}
+
+message FCNavigationInfo {
+  HorizontalNavigationAbility horizontal_ability = 1;
+  VerticalNavigationAbility   vertical_ability   = 2;
+  YawNavigationAbility        yaw_ability        = 3;
+
+  base.Vec4f q                                   = 4;  // x, y, z, w
+  base.Vec3f position_f                          = 5;  // x - y - z - m
+  base.Vec3f velocity_f                          = 6;  // x - y - z - m/s
+
+  base.Vec3d position_e                        = 7;   // latitude, longtitude, altitude
+
+  float ground_distance                          = 8;   // m
+  float height_to_takeoff_point                  = 9;   // m
+  float distance_to_takeoff_point                = 10;  // m
+
+  int32 num_of_gps_satellite                     = 11;
+  base.Vec3f angular_rate_nobias_b               = 12;  // roll-pitch-yaw - no butterworth - nobias - rad/s
+  BrakeStatus brake_status                       = 13;
+  base.Vec3d takeoff_point_position_e            = 14;  // take-off point position GPS coordinates
+  base.Vec3f takeoff_point_position_f            = 15;  // take-off point position in FC frame 
+  float fc2geo_angle_rad			                   = 16;  // relative yaw angle from fc to geographical frame in radian 
+  float drone_geo_yaw_deg                        = 17;  // yaw angle that indicates drone heading w.r.t geographical frame
+  int32 gps_position_accuracy_mm                 = 18;
+  int32 gps_speed_accuracy_mm_s                  = 19;
+  float flight_distance_m                        = 20;  // flight distance from takeoff
+  float flight_time_sec                          = 21;  // flight time from takeoff
+  float left_servo_angle_deg                     = 22;  
+  float right_servo_angle_deg                    = 23;
+  float left_motor_rpm                           = 24;
+  float right_motor_rpm                          = 25;
+  int32 fly_ID                                   = 26; // generate by utc time
+  float max_speed                                = 27;
+  float max_height                               = 28;
+  float max_pitch_deg                            = 29;
+  float imu0_temp                               = 30;
+}
+
+message AttitudeInfo {
+  uint64 timestamp                      = 1;
+  base.Vec4f q                          = 2;  // x, y, z, w
+
+  base.Vec3f angular_rate_nobias_b      = 3;  // roll-pitch-yaw - no butterworth - nobias - rad/s
+  base.Vec3f accel_nobias_b             = 4;  // roll-pitch-yaw - no butterworth - nobias - m/s^2
+  base.Vec3f init_velocity_b            = 5;  // input body-referenced velocity for rovio initialization 
+  bool height_below_10_cm               = 6;
+}
+
+
+message FC {
+  uint64 timestamp                      = 1;
+  FlightControlFlightState flight_state = 2;
+  FCNavigationInfo navigation_info      = 3;
+}
+
+// new message for debugging armcheck information 
+// designed to be consistent with sensor_fail_reason naming 
+message ArmcheckFailReason {
+	bool imu0_faulty = 1; 
+	bool imu0_need_calibration = 2; 
+	bool imu1_faulty = 3; 
+	bool imu1_need_calibration = 4; 
+	bool mag_not_update = 5; 
+	bool mag_wrong_params = 6; 
+	bool mag_no_params = 7; 
+	bool sonar_not_update = 8; 
+	bool sonar_abnormal = 9; 
+	bool baro_not_update = 10;
+	bool baro_abnormal = 11; 
+	bool proxi_broken = 12;   
+	bool vns_not_update = 13; 
+	bool vns_abnormal = 14; 
+	bool motor_jammed = 15; 
+	bool motor_noload = 16;
+	bool motor_broken = 17; 
+	bool battery_empty = 18;	
+	bool ground_takeoff_not_level = 19; 
+	bool ground_takeoff_height_not_ok = 20;
+	bool hand_release_not_level = 21; 
+	bool hand_release_height_not_ok = 22; 
+	bool proxi_need_calibration = 23; 
+	bool proxi_not_update = 24; 
+	bool baro_height_exceed = 25; 
+}
+
+// rocker control command
+message RCCommand {
+  double timestamp        = 1; // -1: invalid, receiving rc cmd timeout. other: valid
+  float roll              = 2;
+  float pitch             = 3;
+  float yaw               = 4;
+  float throttle          = 5;
+  bool in_arm_check       = 6; // in arm check state
+}
+
+
+
+
+
+
+
+
+
+
+/*
+ * FC Command Copied from ffc.idl
+ * nanomsg req/rep: ipc:///tmp/fc_cmd.sock
+ */
+// command definition
+message FCCommandArm {
+}
+
+message FCCommandDisarm {
+}
+
+message FCCommandTakeOff {
+}
+
+message FCCommandLand {
+}
+
+message FCCommandCancelLand {
+}
+
+message FCCommandControl {
+  SetPoint setpoint = 1;
+
+  enum HorizontalControlType {
+    HORIZONTAL_CONTROL_TYPE_POSITION_KEEP   = 0; // 锁定
+    HORIZONTAL_CONTROL_TYPE_POSITION        = 1; // 位置控制
+    HORIZONTAL_CONTROL_TYPE_VELOCITY        = 2; // 速度控制
+    HORIZONTAL_CONTROL_TYPE_ATTITUDE        = 3; // 姿态控制
+  }
+
+  enum VerticalControlType {
+    VERTICAL_CONTROL_TYPE_HEIGHT_KEEP       = 0; // 锁定
+    VERTICAL_CONTROL_TYPE_HEIGHT            = 1; // 位置控制
+    VERTICAL_CONTROL_TYPE_VELOCITY          = 2; // 速度控制
+    VERTICAL_CONTROL_TYPE_THRUST            = 3; // 油门控制
+  }
+
+  enum YawControlType {
+    YAW_CONTROL_TYPE_ANGLE_LOCK             = 0; // 锁定
+    YAW_CONTROL_TYPE_ANGULAR                = 1; // 角度控制
+    YAW_CONTROL_TYPE_ANGULAR_VELOCITY       = 2; // 角速度控制
+  }
+
+  /*
+   * @brief hori control mode and parameters.
+   * @param mode 0: velocity control mode. 1: normal brake mode
+   * @param max_tilt_deg max plate tilt angle[deg]. Range: 10-45.
+   *                     Note: any value out of range will be replaced with 30deg.
+   * @param max_ang_vel max plate angular velocity(normalized). Range: 1-200.
+   *                    Note: any value out of range will be replaced with 100.
+   * @param accel_gain acceleration gain(normalized). Range: 1-200.
+   *                   Note: any value out of range will be replaced with 100.
+   * @param brake_gain normal brake gain(normalized). Range: 1-200.
+   *                   Note: any value out of range will be replaced with 100.
+   */
+  message HorizontalControlAttribute {
+    uint32 mode             = 1;
+    uint32 max_tilt_deg     = 2;
+    uint32 max_ang_vel      = 3;
+    uint32 accel_gain       = 4;
+    uint32 brake_gain       = 5;
+  }
+
+  message SetPoint {
+    HorizontalControlAttribute hori_ctrl_attr   = 1;
+
+    HorizontalControlType hori_ctrl_type        = 2;
+    float x                                     = 3;
+    float y                                     = 4;
+    float hori_extra                            = 5;
+
+    VerticalControlType vert_ctrl_type          = 6;
+    float z                                     = 7;
+    float vert_extra                            = 8;
+
+    YawControlType yaw_ctrl_type                = 9;
+    float yaw                                   = 10;
+    float yaw_extra                             = 11;
+
+    uint64 timestamp_us                         = 12;
+    bool is_auto_horizon_speed                  = 13; 
+  }
+}
+
+message FCCommandGetAllowedMaxVelocity {
+}
+
+message FCCommandGetAllowedMaxVelocityAck {
+  MaxAllowedSpeedParams params = 1;
+
+  message MaxAllowedSpeedParams {
+    float max_allowed_speed_horizon             = 1;
+    float max_allowed_speed_vertical_up         = 2;
+    float max_allowed_speed_vertical_down       = 3;
+  }
+}
+
+message FCCommandHover {
+}
+
+message FCCommandEmergencyBrake {
+}
+
+message FCCommandSmallHeightHold {
+  bool send_enable                      = 1;
+}
+
+message FCCommandCalibrate {
+  bool send_enable                      = 1;
+}
+
+// request
+message FCCommand {
+  oneof command {
+    // fc command interface
+    FCCommandArm                              arm = 1;
+    FCCommandDisarm                           disarm = 2;
+    FCCommandTakeOff                          take_off = 3;
+    FCCommandLand                             land = 4;
+    FCCommandCancelLand                       cancel_land = 5;
+    FCCommandControl                          control = 6;
+    FCCommandGetAllowedMaxVelocity            get_allowed_max_velocity = 7;
+    FCCommandHover                            hover = 8;
+    FCCommandEmergencyBrake                   emergency_brake = 9;
+    FCCommandSmallHeightHold                   small_height_hold = 10;
+
+    // calibrate interface
+    FCCommandCalibrate                        calibrate = 100;
+  }
+}
+
+// response
+message FCCommandAck {
+  bool is_ok = 1;
+  oneof ack {
+    // fc command ack
+    FCCommandGetAllowedMaxVelocityAck         allowed_max_velocity = 2;
+
+  }
+}
+
+
+
+
+
+
+
+
+// may not fulfilled, depending on fc.
+/*
+ * ========================================
+ * DEPRECATED
+ * Just for compile of control engine
+ */
+message FlightControlTakeOffCommand {
+    float height        = 1;
+    float velocity      = 2;
+}
+
+message FlightControlLandingCommand {
+}
+
+message FlightControlHoverCommand {
+}
+
+message FlightControlEmergencyStop {
+}
+
+message FlightControlVelocityControlCommand {
+    float x   = 1;
+    float y   = 2;
+    float z   = 3;
+    float yaw = 4;
+}
+
+message FlightControlCommand {
+    oneof command {
+        FlightControlTakeOffCommand         takeOff                  = 1;
+        FlightControlLandingCommand         landing                  = 2;
+        FlightControlVelocityControlCommand velocityControl          = 3;
+        FlightControlHoverCommand           hover                    = 4;
+        FlightControlEmergencyStop          emergencyStop            = 5;
+    }
+}
+
+ message GimbalPosition {
+  float yaw   = 1;
+  float roll  = 2;
+  float pitch = 3;
+}
+
+message GimbalSpeed {
+  float yaw   = 1; //rad/s
+  float roll  = 2;
+  float pitch = 3;
+}
+
+enum GimbalCommandID {
+  GIMBAL_CMD_STOP                 = 0;
+  GIMBAL_CMD_SET_POS              = 1;
+  GIMBAL_CMD_SET_RELATIVE_POS     = 2;
+  GIMBAL_CMD_SET_SPEED            = 3;
+  GIMBAL_CMD_LOCK                 = 4;
+  //GIMBAL_CMD_GO_HOME              = 5;
+  //GIMBAL_CMD_RESET                = 6;
+}
+
+message GimbalCommand {
+  GimbalCommandID id              = 1;
+  GimbalPosition  pos             = 2;
+  GimbalPosition  relative_pos    = 3;
+  GimbalSpeed     speed           = 4;
+}
+
+message GimbalAck {
+  int32   rc          = 1;
+}
+
+enum GimbalStateId {
+  GIMBAL_NOT_EXISTED  = 0;
+  GIMBAL_POWER_OFF    = 1;
+  GIMBAL_POWER_ON     = 2;
+  GIMBAL_PROTECTED    = 3;
+}
+
+message GimbalState {
+  GimbalStateId state = 1;
+}
+
+message GimbalStatus {
+  GimbalState     state       = 1;
+  GimbalPosition  position    = 2;
+  //GimbalSpeed     speed       = 3;
+}
+
+enum ControlStateID {
+  FC_STATE_STOPPED    = 0;
+  FC_STATE_TAKEOFF    = 1;
+  FC_STATE_HOVER      = 2;
+  FC_STATE_LANDING    = 3;
+  FC_STATE_PANO       = 4;
+  FC_STATE_FLYING     = 5;
+  FC_STATE_CAL_IMU    = 10;
+}
+
+message ControlAck {
+  int32   rc = 1;
+}
+
+message ControlStatus {
+  ControlState                  state           = 1;
+  ControlComplete               complete        = 2;
+  ControlCalibrateIMUStatus     cal_imu_status  = 3;
+  ControlFlyingStatus           flying_status   = 4;
+}
+
+
+message ControlState {
+    ControlStateID state = 1;
+}
+
+enum ControlCompleteID {
+    FC_COMPLETE_TAKE_OFF    = 0;
+    FC_COMPLETE_HOVER       = 1;
+    FC_COMPLETE_LANDING     = 2;
+    FC_COMPLETE_PANO        = 3;
+    FC_COMPLETE_FLYING      = 4;
+}
+
+message ControlComplete {
+    ControlCompleteID id = 1;
+}
+
+enum ControlCalibrateIMUStep {
+    FC_CAL_IMU_STEP_X_UP    = 0;
+    FC_CAL_IMU_STEP_X_DOWN  = 1;
+    FC_CAL_IMU_STEP_Y_UP    = 2;
+    FC_CAL_IMU_STEP_Y_DOWN  = 3;
+    FC_CAL_IMU_STEP_Z_UP    = 4;
+    FC_CAL_IMU_STEP_Z_DOWN  = 5;
+}
+
+message ControlCalibrateIMUStatus {
+    ControlCalibrateIMUStep step    = 1;
+    uint32                        percent = 2;
+}
+
+//todo: fulfill in needed.
+message ControlFlyingStatus {
+
+}
+/*
+ * Deprecated END
+ * ========================================
+ */
+

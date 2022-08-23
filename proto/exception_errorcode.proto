@@ -1,0 +1,188 @@
+syntax = "proto2";
+
+package exception_errorcode;
+
+/*
+ * 设计目标
+ *    * 不区分所属哪个模块
+ *    * 用于快速定位问题原因
+ *    * 唯一性
+ *    * 使用者简单可靠
+ * DomainId命名规则:
+ *    * 见名知义
+ *    * 全大写，词语之间以'_'分隔
+ * 定义错误码名称规则ErrorCode
+ *    * 见名知义
+ *    * 全大写，词语之间以'_'间隔，例IMU_LARGE_VIBRATION_INFLIGHT
+ */
+
+// 代表某个error code影响的域(能力, 功能, 状态)是哪个，比如takeoff, flight_essential, trajectory_evacuation
+// 每个domain类型预留100
+enum DomainId {
+  DOMAIN_NONE                               = 0;
+  // 飞行相关
+  DOMAIN_TAKEOFF                            = 001;
+  DOMAIN_NAV_POSITION                       = 002;
+  DOMAIN_FORCE_LAND                         = 003;
+  DOMAIN_TAKEOFF_SELFCHECK                  = 004; // Unrecoverable errors
+  
+  // 系统相关
+  DOMAIN_STORAGE_SPACE                      = 101;
+  
+  // 拍摄相关
+  DOMAIN_TAKE_PHOTO                         = 201;
+  DOMAIN_RECORD_VIDEO                       = 202;
+
+  // traker相关
+  DOMAIN_PRETAKEOFF_LOCKTARGET              = 301; // lock target before take off
+
+  // 智能模式相关
+  DOMAIN_TRAJECTORY_FADEAWAY                = 401; // Fadeaway path
+  DOMAIN_TRAJECTORY_TRIPOD                  = 402; // Tripod, drone not moving
+  DOMAIN_TRAJECTORY_ORBIT                   = 403; // Orbit path
+  DOMAIN_TRAJECTORY_FOLLOW                  = 404; // Follow
+}
+
+/*
+ * 系统错误码结构：
+ *    * 32bits组成，最高位byte为Reserve，第二字节为Module Id，低两个字节为错误码，其中最高bit用来标识[是否需要上报app端], 低15bits为真正错误码
+ *   ——————————————————————————————————————————————————————————————————————————
+ *   |      Reserve     |      8bits      |               16bits              |
+ *   ——————————————————————————————————————————————————————————————————————————
+ *                           Module Id                     |
+ *                                                         |
+ *                                                     ErrorCode 
+ * !!!注意：以下ErrorCode只需要定义低16bits(ErrorCode), Module Id字节由ExceptionManager填充
+ */
+enum ErrorCode {
+  ERRORCODE_NONE                            = 0;
+
+  /*********************** fc index from 0x0000, 分配0x800(2048) *****************/
+  // 配置文件相关
+  FC_CONFIG_NOT_FOUND                       = 0x0001; // 未读取到配置参数或者配置参数解析失败
+
+  // 飞控系统相关
+  FC_INITIATING                             = 0x0041; // 正在初始化
+  STILL_CHECK_NOT_PASS                      = 0x0042; // IMU静态检测不通过
+
+  // 飞机状态相关
+  DRONE_FREE_FALLING                        = 0x0081; // 飞机正在自由落体
+  DRONE_SPINNING                            = 0x0082; // 飞机正在自旋
+  DRONE_EXCESSIVE_ATTITUDE                  = 0x0083; // 姿态角过大
+  DRONE_IS_NOT_LEVEL                        = 0x0084; // 机身没有水平，跟地面/手掌起飞均相关
+  BIG_WIND_DISTURBANCE                      = 0x0085; // 外界风力干扰比较大
+  TAKEOFF_HEIGHT_EXCEED                     = 0x0086; // 超过起飞海拔高度
+  DRONE_HORI_COLLISION                      = 0x0087; // 水平碰撞
+  DRONE_VERT_COLLISION                      = 0x0088; // 垂直碰撞
+  DRONE_STICK_ON_TOP                        = 0x0089; // 吸顶
+  DRONE_BIG_VIBRATION                       = 0x0090; // 振动过大
+  DRONE_BIG_SHAKING                         = 0x0091; // 晃动过大
+  GROUND_TOO_CLOSE                          = 0x0092; // 距离地面太近
+  
+  // 导航系统相关
+  NAV_POSITION_FAILD                        = 0x00C1; // 位置数据不可用
+
+  // IMU
+  IMU_PREHEATING                            = 0x0101; // IMU预热中
+  IMU_NEED_CALIBRATION                      = 0x0102; // IMU 需要校准
+  IMU_LARGE_VIBRATION                       = 0x0103; // IMU 震动过大
+  IMU_CRAZY_VIBRATION                       = 0x0104; // IMU 震动过于剧烈
+  IMU_0_CLIP                            = 0x0105; // IMU0 超量程
+
+  // 气压相关
+  BARO_DATA_NOT_UPDATE                      = 0x0141; // 气压计不更新数据
+
+  // Motor
+  MOTOR_COMM_FAULT                          = 0x0181; // 电调板通信失败
+  MOTOR_JAMMED                              = 0x0182; // 电机堵转
+  MOTOR_NOLOAD                              = 0x0183; // 电机无桨叶
+  MOTOR_INTERNAL_ABNORMA                    = 0x0184; // 电机内部异常
+  MOTOR_SATURATED                           = 0x0185; // 电机饱和, 飞机的机动状况受到影响
+
+  // 视觉相关
+  VNS_DATA_NOT_UPDATE                       = 0x01C1; // 视觉导航系统不更新
+  VNS_TOO_DARK                              = 0x01C2; // 环境光线太暗
+  VNS_NEED_CALIBRATION                      = 0x01C3; // VNS需要校准
+
+  // TOF 
+  TOF_DATA_NOT_UPDATE                       = 0x0201; // 数据不更新
+  TOF_ABNORMAL_DATA                         = 0x0202; // 收到异常数据
+  TOF_COVERED                               = 0x0203; // 传感器遮挡
+  TOF_UNCALIBRATED                          = 0x0204; // 传感器未校准
+
+  /*********************** index from 0x0800, 分配0x200(512) *****************/
+  // battery
+  BATTERY_LOW_POWER                         = 0x0800; // 电量过低，无法起飞或迫降
+  BATTERY_TEMP_LOW                          = 0x0802; // 电池低温，无法起飞
+
+  /*********************** index from 0x0A00, 分配0x200(512) *****************/
+  // camera
+  CAMERA_SELFCHECK_FAULT                    = 0x0A00; // camera自检测失败
+
+  /*********************** system index from 0x0C00, 分配0x800(2048) *****************/
+  // 系统相关,包含CPU, DSP，Storage, Wirelesss等
+  // CPU
+  CPU_FREQ_REDUCTION                        = 0x0C00; // CPU 发生降频
+  CPU_TEMP_HIGH                             = 0x0C01; // cpu temparture > 100c
+
+  // DSP
+  ADSP_CRASH                                = 0x0C80;
+  SDSP_CRASH                                = 0x0C81;
+
+  // Storage
+  STORAGE_INTERNAL_SPACE_NOT_ENOUGH         = 0x0D00; // 内置存储空间不足
+
+  // wifi
+  WIFI_SELFCHECK_FAULT                      = 0x0D80;
+  WIFI_SIGNAL_QUALITY_LOW                   = 0x0D81;
+
+  /*********************** index from 0x1400, 分配0x200(512) *****************/
+  // OTA
+  OTA_BATTERY_FAILED                        = 0x1400;
+  OTA_SYSAPP_FAILED                         = 0x1401;
+  OTA_BSP_FAILED                            = 0x1402;
+  OTA_UPDATE_IN_PROGRESS                    = 0x1403;
+  OTA_UPDATE_PENDING                        = 0x1404;
+
+  /*********************** index from 0x1600, 分配0x200(512) *****************/
+  // EIS
+  EIS_IMU_MISS                              = 0x1600; // 主摄imu获取失败，稳像效果下降
+  EIS_IMU_NOT_UPDATE                        = 0x1601; // mu讯号错误，稳像失灵无法恢复
+
+  /*********************** index from 0x1800, 分配0x400(1024) *****************/
+  // captain
+  CAPTAIN_TRACKER_NOT_TRACKING              = 0x1800; // tracker在非跟踪状态
+  CAPTAIN_TRACKER_NOT_READY                 = 0x1801; // tracker状态异常，比如tracker应答超时、未收到tracker数据等
+  CAPTAIN_FC_NOT_READY                      = 0x1802; // 飞控状态在非飞行状态或未就绪 
+
+  /*********************** index from 0x1C00, 分配0x200(512) *****************/
+  // VIO
+  VIO_CAMERA_NOT_UPDATE                     = 0x1C00; // 底摄不出图或者底摄延迟超过200ms
+  VIO_CAMERA_LOW_TEXTURE                    = 0x1C01; // 地面纹理弱
+  VIO_CAMERA_IMAGE_LOST                     = 0x1C02; // 底射丢帧
+  VIO_IMU_NOT_UPDATE                        = 0x1C03; // IMU数据丢失
+
+  /*********************** index from 0x1E00, 分配0x200(512) *****************/
+  // Tracker
+  TRACKER_CAMERA_NOT_UPDATE                 = 0x1E00; // 主摄不出图
+
+  /*********************** index from 0x2000, 分配0x200(512) *****************/
+  // System
+  TAKEOFF_LOCKING_TARGET_FAILED             = 0x2000; // 起飞前锁目标失败
+  TEMPERATURE_TOO_LOW                       = 0x2001; // 环境温度太低
+  TEMPERATURE_TOO_HIGH                      = 0x2002; // 环境温度太高
+  DISABLE_FLIGHT                            = 0x2003; // 禁止飞行
+}
+
+message Exception {
+  required uint32 error_code                = 1; // ModuleId & ErrorCode
+  repeated DomainId domains                 = 2; // 异常上报者无需填充此字段，由ExceptionManager自动填充, 异常上报者只需关心上报哪个error code即可
+}
+
+message ErrorCodeSet {
+  repeated ErrorCode error_codes            = 1;
+}
+
+message ExceptionSet {
+  repeated Exception exceptions             = 1;
+}

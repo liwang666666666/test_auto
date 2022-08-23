@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package control_engine;
+
+// ipc:///tmp/control_engine.sock
+
+enum SystemCommandId {
+    SYSTEM_COMMAND_ID_GET_KNOB_GEAR      = 0; // ack: None
+    // TODO: add some more
+}
+
+message SystemCommandAckGetKnobGear {
+    uint32 gear = 1;
+}
+
+message SystemCommand {
+    SystemCommandId id = 1;
+    //oneof param {
+    //}
+}
+
+message SystemCommandAck {
+    bool is_ok = 1;
+    oneof param {
+        SystemCommandAckGetKnobGear knob_gear = 2;
+    }
+}
+

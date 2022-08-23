@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package apriltag;
+
+import "base.proto";
+
+message Apriltag {
+  double timestamp = 1;
+  base.Vec3f position = 2;
+  base.Vec4f quaternion = 3;
+  uint32 tag_num = 4;
+}

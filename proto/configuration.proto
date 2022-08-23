@@ -1,0 +1,272 @@
+syntax = "proto2";
+
+package config;
+
+message Vector { repeated float values = 1; }
+
+message Matrix { repeated Vector rows = 1; }
+
+message LinearAdjust {
+  optional Vector scale = 1;
+  optional Vector bias = 2;
+}
+
+message EISConfig {
+  optional bool enable_imu_log = 1; // 启用 云台 imu 日志, 启用后会在 nanomsg_fastrpc 的日志下记录 imu 日志.
+}
+
+message IMUConfig {
+  optional LinearAdjust accel = 1;
+  optional LinearAdjust gyro = 2;
+  optional Matrix R = 3;
+  optional Vector rotation = 4;
+}
+
+message ServoConfig {
+  optional int32 adc_zero = 1;
+  optional int32 adc_max = 2;
+  optional int32 adc_min = 3;
+}
+
+message OptflowConfig { optional Matrix R = 1; }
+
+// original magnetometer calibration parameters
+message MagConfig {
+  optional LinearAdjust mag = 1;
+  optional Matrix R = 2;
+}
+
+// motor current compensation parameters
+message MagCurrentPolyCoe { optional Vector y = 1; }
+
+// motor current parameter values
+message MagCurrentParams {
+  optional MagCurrentPolyCoe motor1_params = 1;
+  optional MagCurrentPolyCoe motor2_params = 2;
+  optional MagCurrentPolyCoe motor3_params = 3;
+  optional MagCurrentPolyCoe motor4_params = 4;
+  optional int32 order = 5;
+  optional bool turn_on_y_compensation = 6;
+}
+
+// ekf fusion source control flags 
+message FusionControlFlags {
+  optional bool turn_off_sonar			  = 1;
+  optional bool turn_off_proxi			  = 2; 
+  optional bool turn_off_baro			  = 3; 
+  optional bool turn_off_gps			    = 4; 
+  optional bool turn_off_mag 			  = 5; 
+  optional bool turn_off_optflow			= 6; 
+  optional bool turn_off_rovio			  = 7; 
+  optional bool turn_off_slam			  = 8; 
+  optional bool turn_on_optitrack	  = 9; 
+}
+
+message SensorsConfig {
+  repeated IMUConfig     imu     	= 1;
+  repeated OptflowConfig optflow 	= 2;
+  repeated MagConfig     mag     	= 3; 
+  optional MagCurrentParams current_params = 4;
+  optional FusionControlFlags	 fusion_flags	= 5; 
+  repeated ServoConfig     servo     	= 6;
+}
+
+message FCDynamicParams {
+  optional float roll_acc_ratio_in_default_air_density = 1;
+  optional float roll_actuator_ratio_nominal = 2;
+  optional float pitch_acc_ratio_in_default_air_density = 3;
+  optional float pitch_actuator_ratio_nominal = 4;
+  optional float yaw_acc_ratio_in_default_air_density = 5;
+  optional float yaw_actuator_ratio_nominal = 6;
+}
+
+message FCPIDParams {
+  optional float horizon_x_position_kp_in_default_height = 1;
+  optional float horizon_y_position_kp_in_default_height = 2;
+
+  optional float horizon_x_velocity_kp_in_default_height = 3;
+  optional float horizon_x_velocity_ki_in_default_height = 4;
+  optional float horizon_x_velocity_kd_in_default_height = 5;
+
+  optional float horizon_y_velocity_kp_in_default_height = 6;
+  optional float horizon_y_velocity_ki_in_default_height = 7;
+  optional float horizon_y_velocity_kd_in_default_height = 8;
+
+  optional float roll_ang_kp_in_default_height = 9;
+  optional float roll_vel_kp_in_default_height = 10;
+  optional float roll_vel_ki_in_default_height = 11;
+  optional float roll_vel_kd_in_default_height = 12;
+
+  optional float pitch_ang_kp_in_default_height = 13;
+  optional float pitch_vel_kp_in_default_height = 14;
+  optional float pitch_vel_ki_in_default_height = 15;
+  optional float pitch_vel_kd_in_default_height = 16;
+
+  optional float yaw_ang_kp_in_default_height = 17;
+  optional float yaw_vel_kp_in_default_height = 18;
+  optional float yaw_vel_ki_in_default_height = 19;
+  optional float yaw_vel_kd_in_default_height = 20;
+
+  optional float height_pos_kp_in_default_height = 21;
+  optional float height_vel_kp_in_default_height = 22;
+  optional float height_vel_ki_in_default_height = 23;
+  optional float height_vel_kd_in_default_height = 24;
+  optional float height_accel_kp_in_default_height = 25;
+  optional float height_accel_ki_in_default_height = 26;
+  optional float height_accel_kd_in_default_height = 27;
+
+  optional string channel6_param_name = 28;
+  optional string channel7_param_name = 29;
+  optional float channel6_min = 30;
+  optional float channel6_max = 31;
+  optional float channel7_min = 32;
+  optional float channel7_max = 33;
+
+  optional bool enable_wheel_tuning = 34;
+}
+
+enum DisconnectedAction {
+  DoReturn = 0;
+  KeepHovering = 1;
+}
+
+message HoverConfig {
+  optional DisconnectedAction disconnect = 1;
+}
+
+enum ControllerTestType {
+  TestFlyingUpAndBackwards = 0;  
+  TestSineWave = 1;
+}
+
+// FCControllerParams is used only by fc for debugging purpose
+message FCControllerParams {
+  optional ControllerTestType controller_test_type = 1;
+  optional uint32 test_time_in_ms = 2;        // test time total length
+  optional float input_max_x = 3;     //test max x speed in m/s in current fc frame
+  optional float input_max_y = 4;    //test max y speed in m/s
+  optional float input_max_z = 5;     //test max z speed in m/s
+  optional float input_max_yaw = 6;    // test max yaw speed in rad/s
+  optional float input_sinc_freq = 7;    // test x yz z yaw sinc wave in hz
+}
+
+// DroneSensitivity is a public interface used by APP and Captain and fc
+message DroneSensitivity {
+  optional float attitude_sensitivity =
+      1; // how fast drone will react and level, the bigger, the faster. range
+         // [40, 100]
+  optional float brake_sensitivity =
+      2; // how fast brake in position control mode, the bigger, the faster.
+         // range [40, 200]
+  optional float yaw_speed_sensitivity =
+      3; // control the speed of yaw. The higher the value, the faster drone
+         // will yaw. range [50, 200]
+}
+
+// FlyingParameters is a public interface used by APP and Captain and fc
+message FlyingParameters {
+  optional float max_attitude = 1; // max allowed input attitude in degrees, range[10, 30]
+  optional float max_roll_angular_velocity = 2; // max allowed input roll angular velocity in rad/s, range[1.0, 5.8]
+  optional float max_pitch_angular_velocity = 3; // max allowed input pitch angular velocity in rad/s, range[1.0, 3.8]
+  optional float max_yaw_angular_velocity = 4; // max allowed input yaw angular velocity in rad/s, range[0.1, 0.8]
+  optional float max_horizon_velocity = 5; // max allowed input horizon speed in m/s, range[0.5, 4]
+  optional float max_vertical_velocity_up = 6; // max allowed input vertical up speed in m/s, range[0.3, 2.5]
+  optional float max_vertical_velocity_down = 7; // max allowed input vertical down speed in m/s, range[0.3, 2]
+  optional float takeoff_finish_height = 8; // when finishing takeoff, drone height above ground in m ,
+         // range[0.4, 1.2]
+  optional float land_pause_height = 9; // when commanding drone fly vertical down, at this height above ground
+         // the drone will stop, range[0.4, 1.2]
+}
+
+//precision landing parameter
+message PrecisionLandParameter{
+  optional float max_horizon_velocity = 1;
+  optional float max_vertical_velocity = 2;
+  optional float start_search_altitude = 3;
+  optional float max_yaw_speed = 4;
+  optional float search_radius = 5;
+}
+
+enum EmergencyStopType {
+  EmergencyStopTypeFaultOnly = 0;
+  EmergencyStopTypeDisable = 1;
+  EmergencyStopTypeAlways = 2;
+}
+
+message EmergencyStopParams {
+  optional EmergencyStopType type = 1;
+  // reserve
+}
+
+message FCConfig {
+  repeated FCPIDParams pid = 1;
+  optional ServoParams servos = 2;
+  // FCDynamicParams dynamic = 2;
+  optional FCControllerParams controller_params = 3;
+  optional DroneSensitivity drone_sensitivity = 4;
+  optional FlyingParameters flying_params = 5;
+  optional PrecisionLandParameter precision_land_params = 6;
+  optional EmergencyStopParams emergency_stop_params = 7;
+}
+
+// not used now
+message ServoAngleParams {
+  repeated float scale = 1;
+  repeated float offset = 2;
+}
+
+// not used now
+message ServoParams {
+  optional ServoAngleParams alpha = 1;
+  optional ServoAngleParams lambda = 2;
+}
+
+// Configuration bundle only for FC 
+message FlightControlConfig {
+	optional SensorsConfig sensors = 1; 
+	optional FCConfig fc = 2; 
+} 
+
+message DroneConfig {
+  optional SensorsConfig sensors = 1;
+  optional FCConfig fc = 2;
+  optional EISConfig eis = 3;
+  optional HoverConfig hover = 4;
+}
+
+enum ConfigurationCommandType {
+  ConfigurationCommandReload        = 0;
+  ConfigurationCommandGet           = 1;
+  ConfigurationCommandUpdate        = 2;
+  ConfigurationCommandMerge         = 3;
+  ConfigurationCommandGetDefault    = 4; // get default configuration
+  ConfigurationCommandRestoreDefault= 5; // restore curretn configuration to default
+}
+
+message ConfigurationCommand {
+  optional ConfigurationCommandType type = 1;
+  optional DroneConfig config = 2;
+}
+
+message ConfigurationCommandResponse {
+  optional bool ok = 1;
+  optional DroneConfig config = 2;
+}
+
+message MotorIrmck099Parameter {
+  optional uint32 reg = 1;
+  optional uint32 value = 2;
+}
+
+message ESCOneWayConfig {
+  optional uint32 id = 1;
+  optional bool need_reverse = 2;
+  oneof esc_type { MotorIrmck099Parameter irmck099_params = 3; }
+}
+
+message ESCConfig {
+  optional ESCOneWayConfig default_ = 1;
+  repeated ESCOneWayConfig configs = 2;
+}
+
+message DynamicConfig { repeated ESCConfig esc = 1; }

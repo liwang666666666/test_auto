@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package gimbal;
+
+import "base.proto";
+
+/*
+ * @todo 描述坐标系方向
+ */
+
+message GimbalCommand {
+  oneof command_type {
+    GimbalControl control = 1;
+    BinocularControl binocular_control = 2;
+    GimbalSyncTime sync_time = 3;
+  }
+}
+
+message GimbalAxisControl {
+  base.CoordinateSystem coordinate_system = 1;
+  oneof control_type {
+    float set_point_angle = 2;
+    float set_point_angular_velocity = 3;
+  }
+}
+
+message GimbalSyncTime {}
+
+message GimbalSelfCheck {}
+
+message BinocularSelfCheck {}
+
+message GimbalControl {
+  GimbalAxisControl roll = 1;
+  GimbalAxisControl pitch = 2;
+  GimbalAxisControl yaw = 3;
+}
+
+message BinocularControl {
+  enum ControlType {
+    ANGLE = 0;
+    ANGLE_VELOCITY = 1;
+  }
+
+  int32 enable = 1;
+  float angle = 2;
+  ControlType type = 3;
+}
+
+message GimbalStatus {
+  enum GimbalState {
+    NORMAL = 0;
+    NEED_CALIBRATION = 1;
+    NOT_FOUND = 2;
+    ERROR_UNKNOWN = 3;
+  }
+
+  GimbalState state = 1;
+  base.Vec4f attitude_in_ground = 2;
+  base.Vec4f attitude_in_body = 3;
+}

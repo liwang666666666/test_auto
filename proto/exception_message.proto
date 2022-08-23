@@ -1,0 +1,32 @@
+syntax = "proto2";
+
+package exception_message;
+
+/*
+ * 设计目标
+ *    * 用于各模块上报关键性消息, 还原问题/Debug时刻
+ *    * 独立于事件、错误码上报通道
+ *    * 为多模块间Debug提供一种方式
+ * 需要注意：
+ *    * 尽量不要发送太长的消息
+ *    * 不要用于常规的模块内部的Debug手段
+ */
+
+/*
+ * Event代表的是突发事件，往往发生的时间很短暂
+ */
+message Message {
+  required Level level                  = 1;
+  required string message               = 2;
+
+  enum Level {
+    INFO      = 1; // 比较关键性的事件
+    WARNING   = 2; // 出现了一些异常，不影响当前的使用，但是可能会导致某些功能失效，不能使用
+    ERROR     = 3; // 出现了一些异常，这些异常会给当前的飞行、使用带来比较严重问题。这些异常或许可以在一段事件内或者换个环境的时候恢复
+    FATAL     = 4; // 不可恢复的错误，重启有可能解决问题
+  }
+}
+
+message MessageSet {
+  repeated Message messages             = 1;
+}

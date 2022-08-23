@@ -1,0 +1,86 @@
+syntax = "proto2";
+
+package exception_manager;
+
+import "exception_errorcode.proto";
+import "exception_event.proto";
+import "exception_message.proto";
+import "common_types.proto";
+
+/*
+ * 设计目标：
+ *    * 错误码、事件、消息的集合
+ */
+
+// Module Id用来快速识别32bits错误码属于哪个模块上报
+enum ModuleId {
+  MODULE_ID_UNKNOWN                         = 0;
+  MODULE_ID_EM                              = 1; // ExceptionManager: Collect All Exceptions
+  MODULE_ID_FC                              = 2; // Flight Control
+  MODULE_ID_CAPTAIN                         = 3;
+  MODULE_ID_SS                              = 4; // SystemService
+  MODULE_ID_CS                              = 5; // CameraService
+  MODULE_ID_TRACKER                         = 6;
+  MODULE_ID_VIO                             = 7;
+  MODULE_ID_SIMULATOR                       = 8; // exception simulator
+}
+
+
+// for all applications in Drone side
+message ExceptionCollection {
+  required ModuleId module_id                     = 1; // exception manager用于区分哪个模块发的异常，方便汇总
+  oneof data {
+    exception_errorcode.ExceptionSet exceptions   = 2;
+    exception_event.EventSet events               = 3;
+    exception_message.MessageSet messages         = 4; // for exception_manager
+  }
+}
+
+/***************************************
+* command id
+****************************************/
+enum ExceptionManagerCommandId {
+    EXCEPTION_MANAGER_CMD_EXCEPTION_REPORT            = 0;
+    EXCEPTION_MANAGER_SIMULATOR_EXCEPTION_REPORT      = 1;
+}
+
+message ExceptionManagerCommand {
+    required ExceptionManagerCommandId id             = 1;
+    oneof param {
+      ExceptionCollection exception_collection        = 2;
+    }
+}
+
+message ExceptionManagerCommandAck {
+  required bool is_ok                                 = 1;
+  required ExceptionManagerCommandId id               = 2; // returns the ID of the request
+}
+
+message ExceptionAffectDomain {
+  repeated AffectDomain affect_domains                = 1;
+
+  message AffectDomain {
+    required exception_errorcode.ErrorCode error_code = 1;
+    repeated exception_errorcode.DomainId domains     = 2;
+  }
+}
+
+message CustomerExceptionRelation {
+  repeated Relation relations                         = 1;
+
+  message Relation {
+    required h130.FlightStatusError.Error customer_error_code = 1;
+    repeated exception_errorcode.ErrorCode internal_error_codes   = 2;
+    repeated ReportStageId report_stages                          = 3;
+  }
+
+  enum ReportStageId {
+    REPORT_STAGE_ID_IDLE                              = 0; // the fc state is disarm
+    REPORT_STAGE_ID_CHECK_BEFORE_TAKEOFF              = 1; // selfcheck before pre-takeoff
+    REPORT_STAGE_ID_PRE_TAKINGOFF                     = 2; // in pre-takeoff
+    REPORT_STAGE_ID_PRE_TAKINGOFF_ABORT               = 3; // abort pre-takeoff when happens some errors
+    REPORT_STAGE_ID_FLYING                            = 4;
+    REPORT_STAGE_ID_LANDING                           = 5;
+  }
+}
+

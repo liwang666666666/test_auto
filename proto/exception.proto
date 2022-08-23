@@ -1,0 +1,450 @@
+syntax = "proto2";
+
+package exception;
+
+
+/*
+ * CE 为 nanomsg 为 sub, 并且 bind 到 tcp://(IP address, could be *):20001 上
+ * 由其他模块为 pub 并 connect 到这个端口上;
+ * CE 负责汇总 合并 所有错误信息，并发送给 App
+ */
+
+message ExceptionCollection {
+  repeated Exception exceptions = 1;
+}
+
+enum Level {
+  // 出现了一些异常，不影响当前的使用，但是可能会导致某些功能失效，不能使用
+  Warning = 0; 
+
+  // 出现了一些异常，这些异常会给当前的飞行、使用带来比较严重问题。
+  // 这些异常或许可以在一段事件内或者换个环境的时候恢复
+  Error = 1;
+
+  // 出现了不可恢复的错误，如果在飞行中，用户应当立刻停止飞行
+  Fatal = 2;
+}
+
+message Exception {
+  required Level level = 1;
+  oneof module {
+    FlightControlException fc_exception = 2;
+    CaptainException captain_exception = 3;
+    CameraServiceException camera_service_exception = 4;
+    BatteryException battery_exception = 5;
+    GESException ges_exception = 6;
+    ObstacleAvoidanceException  oa_exception = 7;
+    TrackerException tracker_exception = 8;
+    GimbalException gimbal_exception = 9;
+    CpuException cpu_exception = 10;
+    AdspException adsp_exception = 11;
+    SdspException sdsp_exception = 12;
+    StorageException storage_exception = 13;
+    WifiException wifi_exception = 14;
+    FpvException fpv_exception = 15;
+    OtaException ota_exception = 16;
+    TakeOffException takeoff_exception = 17;
+    FlyingException flying_exception = 18;
+    EISException eis_exception = 19;
+  }
+}
+
+
+message FlightControlException {
+  required Component component = 1;
+  required ExceptionType type  = 2;
+  optional SensorId sensor_id = 3;
+
+  enum Component {
+    IMU = 0;
+    GPS = 1;
+    VNS = 2;
+    Baro = 3;
+    Sonar = 4;
+    Proxi = 5;
+    Mag = 6;
+    Motor = 7;
+    Params = 8;
+    Armcheck = 9; 
+    Servo = 10;
+    TOF = 11;
+    Remoter = 12;
+    Status = 13;
+  }
+
+  enum ExceptionType {
+    // magnetometer  
+    // 磁力计相关
+    MagCalibrationParamsNotExists = 0; // 磁力计校准参数确实
+    MagCalibrationParamsIsWrong = 1; // 磁力计校准参数错误 或 不在合理范围
+    MagNeedCalibration = 2; // 磁力计需要校准
+    MagNotUpdate = 3; // 磁力计不更新
+    MagAbnormalData = 4; // 磁力计收到的是异常的数据
+
+    // GPS
+    // GPS相关
+    GPSNotUpdate = 10;  // GPS 不更新
+    GPSWeakSignal = 11; // GPS 信号弱 
+
+    // Motor
+    // 电机相关
+    MotorCommunicationFailed = 20; // 电调板通信失败
+    MotorJammed = 21; // 电机堵转
+    MotorNoLoad = 22; // 电机无桨叶
+    MotorAbnormal=23; // 电机内部异常
+    MotorSaturated=24; // 电机饱和, 飞机的机动状况受到影响
+    MotorUnbalanced = 25; // 电机不平衡
+    MotorShootBlade=  26; // 电机射桨
+
+    // VNS
+    // 底摄导航系统相关
+    VNSNotUpdate = 30; // 视觉导航系统不更新
+    VNSAbnormalData = 31; // 视觉导航系统发布失效的数据，延时过长
+    VNSTooDark = 32; // 环境光线太暗
+    VNSNeedCalibration = 33; // VNS需要校准
+
+    // Params
+    // 配置文件相关
+    ConfigNotFound = 40; // 未读取到配置参数或者配置参数解析失败
+    ControlParamsNotFound = 41; // 未读取到飞控控制相关的参数 
+
+    // Baro
+    // 气压相关
+    BaroNotUpdate = 50; // 气压计不更新数据
+    BaroAbnormalData = 51; // 气压计收到反常数据
+    BaroHeightExceed = 52; // 气压计高度超过3000米
+    
+    // Sonar and Proxi
+    // 声呐和proximity传感器相关
+    SonarCommunicationFailed = 59; // 声呐板通讯异常
+    SonarNotUpdate = 60; // 声呐不更新
+    SonarAbnormalData = 61; // 声呐收到异常数据
+    SonarSnrIsLow = 62; // 声呐信噪比比较低
+    SonarIsInDeadzone = 63; // 声呐在死区范围内
+    ProxiNotUpdate = 64; // P-Sensor 不更新
+    ProxiAbnormalData = 65; // P-Sensor 声呐收到
+    ProxiNeedCalibration = 66; // P-Sensor 需要校准
+    SonarProxiDataUnmatch = 67; // Sonar 与 P-Sensor 距离不匹配
+    ProxiBroken = 68; // P-Sensor传感器发生损坏
+
+    // IMU
+    // IMU相关
+    IMULargeVibration = 80; // IMU 震动过大
+    IMUCrazyVibration = 81; // IMU 震动过于剧烈 
+    IMUBiasIsTooBig = 82; // IMU 零偏过大
+    IMUAccelAbnormalData = 83; // IMU 加速度数据异常
+    IMUGyroAbnormalData = 84; // IMU 陀螺仪数据异常
+    IMUDiverged = 85; // IMU0和IMU1的数据严重不一致
+    IMUNeedCalibration = 86; // IMU 需要校准
+    IMUCalibrationParamsLost = 87; // IMU 校准参数丢失
+    IMUPreheating = 88; // IMU预热中
+
+    // take-off relevant 
+    // 起飞条件相关
+    DroneIsNotLevel = 100; // 机身没有水平，跟地面/手掌起飞均相关
+    GroundTakeoffHeightAbnormal = 101; // 地面起飞高度不符合
+    HandTakeoffHeightAbnormal = 102; // 手掌起飞高度不符合
+
+    // external disturbance 
+    // 外界扰动相关
+    BigWindDisturbance = 110; // 外界风力干扰比较大
+
+    // Servo
+    ServoCommunicationFailed = 120; // Servo板通信失败
+    ServoCalibrationParamsNotExists = 121; // Servo校准参数缺失
+    ServoCalibrationParamsIsWrong = 122; // Servo校准参数错误 或 不在合理范围
+    ServoAbnormal= 123; // Servo内部异常
+    ServoStuck = 124; // Servo卡住
+    ServoExcessiveGap = 125; // Servo间隙过大
+    
+    // TOF 
+    TOFNotUpdate = 130; // 数据不更新
+    TOFAbnormalData = 131; // 收到异常数据
+    TOFCovered = 132; // 传感器遮挡
+
+    // Remoter
+    RemoterNotUpdate = 140; // 遥控器数据不更新
+
+    // Drone Status
+    StillCheckNotPass = 150; // IMU静态检测不通过
+    FCInitiating = 151; // 正在初始化
+    DroneFreeFalling = 152; // 飞机正在自由落体
+    DroneSpinning = 153; // 飞机正在自旋
+    DroneExcessiveAttitude = 154; // 姿态角过大
+    DroneCollision = 155;//检测到碰撞
+    DroneWindForce = 156; //检测风扰
+    DroneOverTop = 157; //检测吸顶
+    DroneFlip = 158;    //检测飞机翻转
+  }
+
+  message SensorId {
+    repeated uint32 id = 1;
+  }
+}
+
+message CaptainException {
+  required ExceptionType type = 1;
+
+  enum ExceptionType {
+    // fc
+    FCNotReady                    = 0; // FC未就绪或数据更新异常
+
+    // gps
+    GPSNotReady                   = 20; // GPS未就緒或信号差
+    GPSTakeOffPointInvalid        = 21; // GPS起飞点无效
+
+    // 避障
+    ObstacleAvoidanceNotReady     = 40; // 避障模块异常
+    ObstacleAvoidanceDetected     = 41; // 遇到障碍物
+
+    // Tracker
+    TrackerNotReady               = 60; // Tracker模块异常，请求tracker通信错误
+    
+    // Battery
+    BatteryNotReady               = 80; // Battery异常
+    BatteryLowForceLanding        = 81; // 低电量强制降落中
+
+    // Gimbal
+    GimbalNotReady                = 100; // 云台异常
+
+    // GES
+    GESForceLanding               = 121; // 禁飞区强制降落中
+    GESFalling                    = 122; // 限高区下降中
+    GESTouchedLimitZone           = 123; // 触碰到限制区域
+
+    // Storage
+    StorageNotReady               = 141; // 存储异常
+
+    // Follow Me Mode
+    FollowHeightTooLow            = 160; // 跟拍高度太低　
+    FollowDistanceTooClose        = 161; // 跟拍距离太近
+  }
+}
+
+message BatteryException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+    BattNone = 0;
+    //todo: need change name to BattTemperatureLowPowerOff
+    BattTemperatureLow = 1;// 电池低温报警, 自动关机
+    BattOverCurrent = 2;//电池过流异常,电池FW 上报的异常,ZZ用的自定义的事件
+    BattOverLoad = 3;//电池过载报警
+    BattShort = 4;//电池短路报警
+    BattCommError = 5;//电池内部通讯异常
+    BattVoltageLow = 6;//电池欠压异常
+    BattBrokenDown = 7;//电池永久失效
+    BattNonBalance = 8;//电池内部不平衡
+    BattFuelLow = 9;//降落时，低电量10%；起飞时，依温度、海拨变化。
+    BattFuelHeavyLow = 10;//低电量6%
+    BattSubOverCurrent = 11; // 5s 3A, 待机状态
+    BattLevelLanding = 12;//达到降落电量
+    BattLevelReturn = 13;//达到返航电量
+    BattLevelLow = 14; //电量还剩25%, 提示client.
+    BattLevelUltraLow = 25;  // 电量极低，提示用户马上处理
+    BattHighOverCurrent = 15; // 5s 20A 飞行状态,电流过高,提示用户,并且通知Captain限速
+    BattTemperatureWarnDisarm = 16; // 通知captain 解除高温警告.
+    BattTemperatureSubHigh = 17; // 75度, 通知captain高温警告.
+    BattOverCurrentWarnDisarm = 18; // 通知captain 解除电流过高警告.
+    BattNonHealthy = 19; // 电池不健康报警
+    BattTemperatureHigh_50 = 20; // 50度,不能起飞
+    BattTemperatureHigh_65 = 21; // 65度,提示用户减速飞行
+    BattTemperatureLowCanNotTakeOff = 22; //电池低温，无法起飞。
+    BattTemperatureLowNeedSelfHeat = 23;  // 温度过低，需要自加热，才能起飞。
+    BattLimitSpeed  = 24; // 电池由于温度或电量限制，不能全速(大电流工作)，需要限制到8m/s以下飞行速度
+    BattInsertNotGood = 26; //电池包未插好
+  }
+}
+
+message CameraServiceException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  CameraNone = 0;
+	  CameraSelfCheckFault = 1;
+  }
+}
+
+message CpuException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  CpuNone = 0;
+	  CpuFreqReduction = 1;//CPU 发生降频
+	  CpuTemperatureHigh = 2; // cpu temparture > 100c
+  }
+}
+
+message AdspException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  AdspNone = 0;
+	  AdspCrash = 1;
+  }
+}
+
+message SdspException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  SdspNone = 0;
+	  SdspCrash = 1;
+  }
+}
+
+message StorageException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  StorageNone = 0;
+	  SDCardSpaceNotEnough = 1;
+	  InternalSpaceNotEnough = 2;
+  }
+}
+
+message WifiException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  WifiNone = 0;
+	  WifiSelfCheckFault = 1;
+	  WifiSignalQualityLow = 2;
+  }
+}
+
+message FpvException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  FpvNone = 0;
+	  FpvSelfCheckFault = 1;
+	  FpvSignalQualityLow = 2;
+	  FpvVersionNotMatch = 3; // Firmware version not match between sky and ground.
+  }
+}
+
+message OtaException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  OtaNone = 0;
+	  OtaGimbalFailed = 1;
+	  OtaSonarFailed = 2;
+	  OtaFPVFailed = 3;
+	  OtaBatteryFailed = 4;
+	  OtaSysappFailed = 5;
+	  OtaBspFailed = 6;
+  }
+}
+
+message TakeOffException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+	  TakeOffNone = 0;
+	  TakeOffCanNotUseBattery = 1;
+	  TakeOffSdspStatusFault = 2;
+	  TakeOffAdspStatusFault = 3;
+	  TakeOffCanNotUseImu = 4;
+	  TakeOffCanNotUseMag = 5;
+	  TakeOffFlightEssentialFault = 6;
+	  TakeOffNotEnoughBattery = 7;
+	  TakeOffBatteryWarning = 8;
+	  TakeOffOnGroundFault = 9;
+	  TakeOffOnHandFault = 10;
+	  TakeOffCpuStatusFault = 11;
+	  TakeOffWifiStatusFault = 12;
+	  TakeOffFpvStatusFault = 13;
+	  TakeOffCameraStatusFault = 14;
+    TakeOffBatteryHighTemperature = 15;
+    TakeOffBatteryLowTemperature = 16;
+    TakeOffInLimitFlyZone = 17;
+	  TakeOffCpuTemperatureHigh = 18;
+    TakeOffBattInsertNotGood = 19;
+  }
+}
+
+message FlyingException {
+  required ExceptionType type = 1;
+  enum ExceptionType {
+    FlyingExceptionNone = 0;
+    FlyingNeedHeat = 1;
+  }
+}
+
+message GESException {
+  required ExceptionType type  = 1;
+
+  enum ExceptionType {
+    InLimitFlyZone	              = 0; //禁飞区内, 禁止起飞或强制降落中
+    TouchedLimitFlyZone	          = 1; //飞机在禁飞区外, 飞机已触碰到禁飞区
+    ApproachLimitFlyZone          = 2; //飞机在禁飞区外, 即将触碰到禁飞区
+    HasLimitFlyZoneNearby         = 3; //附近有禁飞区
+    NoGPSInDroneAndControllerInNoFlyZone = 4; //移动设备（手机）在禁飞区中，且飞机无 GPS
+    InLimitHeight                 = 5; //在限高区内，但未达到限制高度
+    ApproachLimitHeight           = 6; //在限高区内，达到限制高度
+    ExceedLimitHeight             = 7; //在限高区内，超过限制高度
+    TouchedLimitHeightZone        = 8; //飞机在限高区外，触碰到限高区
+    ApproachLimitHeightZone       = 9; //飞机在限高区外，在限高区边缘（即将触碰到限高区）
+    HasLimitHeightZoneNearby      = 10; //附近有限高区
+    ReachLimitDistance            = 11; //已达最大限制距离
+    ReachLimitHeight              = 12; //已达最大限制高度
+    ReachLimitHeightNoGPS         = 13; //无GPS时，已达最大限制高度
+    LoadLimitZoneDataFailed       = 14; //加载限制区数据失败
+    LoadGeoDataFailed             = 15; //加载GEO数据失败，用于获取国家码
+  }
+}
+
+message TrackerException {
+  enum ExceptionType {
+    CANNOT_GET_IMAGE              = 0; // cannot get image
+    CANNOT_GET_FC_INFO            = 1; // cannot get FC info
+    CANNOT_GET_EIS                = 2; // 拿不到EIS矩阵信息
+    CANNOT_GET_PITCH              = 3; // 拿不到云台pitch信息
+  }
+
+  required ExceptionType  type = 1;
+  optional float  timestamp = 2;
+}
+
+message ObstacleAvoidanceException {
+  enum ExceptionType {
+    BinocularDisabled = 0;  // 双目被按下、禁用
+    PoseTimeout = 1; // 长时间得不到位姿的信息
+    BinocularImageTimeout = 2; // 长时间得不到双目图像
+    BinocularAngleTimeout = 3; // 长时间得不到双目角度
+    PoseNavigationFailed = 4; // 位姿导航能力不足
+    NoCalibrationParams = 5; // 找不到校准参数
+    CalibrationParamsParseFailed = 6; // 校准参数解析失败
+    BinocularControlFailed = 7; // 双目控制失败
+    EnvironmentLightIsTooLight = 8; // 环境光线过亮
+    EnvironmentLightIsTooDark = 9; // 环境光线过暗
+    DisableBrake = 10; // 避障刹车未开启
+    DisableDetour = 11; // 避障绕行未开启
+    BrakeBeforeObstacle = 12; // 在障碍物前刹车
+    ObstacleDetected1 = 13; // 3m内检测到障碍物
+    ObstacleDetected2 = 14; // 3m-5m内检测到障碍物
+    BinocularStuck = 15;  // 双目卡住
+    BinocularNoImage =16; // 双目无图
+  }
+
+  required ExceptionType  type = 1;
+}
+
+message GimbalException {
+  enum ExceptionType {
+    Overload                      = 0; // 云台电机过载
+    ImuFault                      = 1; // 云台 IMU 出现异常
+    ImuOffLine                    = 2; // 检测不到IMU
+    ImuAccelErr                   = 3; // IMU破损
+    ImuGyroBiasHigh               = 4; // gyro误差较大
+    GimablOscillationLarge        = 5; // 当前环境震动较大
+    ParameterErr                  = 6; // 参数读取错误
+  }
+  required ExceptionType type     = 1;
+}
+
+message EISException {
+  enum ExceptionType {
+      EisImuMiss                  = 0; // 主摄imu获取失败，稳像效果下降
+      EisImuInvalid               = 1; // mu讯号错误，稳像失灵无法恢复
+  }
+
+  required ExceptionType type = 1;
+}
+
+/**
+ * 1. 如何才能够携带一些额外信息 ？ 比如，电机赌转，哪些电机赌转了 ？
+ * 2. 对于不同类型的模块，可能要有不同类型的汇总错误的模式, 因此担心仅仅使用 Code 不足以描述
+ */

@@ -1,0 +1,349 @@
+syntax = "proto2";
+
+package ability;
+
+import "exception.proto";
+
+/*
+ * AbilitySet: 包含两类信息。
+ * 1. Ability, 状态性质的信息， 因某些器件状态或其他模块的能力，而影响到某能力。
+ * 2. Event, 事件性质的信息， 因某些原因导致的突发事件。 往往意味着只会持续很短暂的时间。
+ */
+
+
+/*
+ * Warning!!!!!!!!!!!!!!!
+ * 这里的各种属性暂时都是杨帆根据自己理解随便写的，不是代表真正是这样的，各个模块需要自己写一下、梳理一下自己的哦.
+ *
+ */
+enum AbilityLevel {
+  OK = 0;
+  Failed = 1;
+}
+
+/*
+ * 所有的 Ability 都应该符合这样的规则
+ *
+ * 1. 都拥有一个 AbilityLevel level 的字段表示等级;
+ * 2. 都有一个 repeated exception.Exception 的字段，汇总导致能力不 OK 的异常;
+ *
+ * 如果 Ability 只需要对应的等级的话，默认使用 Ability 就好了;
+ * 如果需要携带额外的数据和属性，可以尝试自定义并添加字段，但需要符合上述需求;
+ */
+message Ability {
+  required AbilityLevel level = 1;
+  repeated exception.Exception exceptions = 2;
+}
+
+/*
+ * EventType可以是某个任务，或模块
+ */
+enum EventType {
+  EventTypeReturn                     = 0; // 返航
+  EventTypeFollow                     = 1; // 跟拍模式
+  EventTypeTrajectory                 = 2; // 大片模式
+  EventTypeGES                        = 3; // GES模块
+  EventTypeLockTarget                 = 4; // 锁人模式
+  EventTypeFC                         = 5; // 飞控
+}
+
+/*
+ * Event代表的是突发事件，往往发生的时间很短暂
+ */
+message Event {
+  required EventAction action = 1;
+  required EventReason reason = 2;
+
+  /*
+  * EventAction表示此Event会导致什么动作
+  */
+  enum EventAction {
+    Nothing       = 0;
+    Exit          = 1; // 退出当前任务或功能
+    Pause         = 2; // 暂停当前任务或功能
+    Stop          = 3; // 飞机悬停
+    CannotTakeOff = 4; // 不能起飞
+  }
+
+  /*
+  * EventReason表示发生Event的原因
+  */
+  enum EventReason {
+    FCNotReady                = 0; // FC异常
+    TrackerNotReady           = 1; // Tracker异常
+    TrackLostTimeout          = 2; // 跟踪过程中，跟丢超时 
+    ObstacleDetected          = 3; // 遇到障碍物 
+    ReturnHomePointNotValid   = 4; // GPS返航点无效
+    GPSNotReady               = 5; // GPS未就緒或信号不好
+    GimbalNotReady            = 6; // Gimbal异常
+    ReachLimitHeight          = 7; // 到达限制高度
+    TouchedLimitZone          = 8; // 触碰到限制区域
+    LoadGESZoneDataFailed     = 9; // 加载禁飞区限制区域数据失败
+    LoadGESGEODataFailed      = 10; // 加载禁飞区GEO数据失败
+    StorageNotReady           = 11; // 存储异常
+    ObstacleAvoidanceNotReady = 12; // 避障模块异常
+    MinHeightMaintainEnabled  = 13; // 触发最小高度保持
+    TrackDistanceTooClose     = 14; // 跟踪距离太近
+
+    // fc
+    FCStillCheckNotPass       = 50; // IMU静态检测不通过
+    FCInitiating              = 51; // FC正在初始化
+  }
+}
+
+
+message AbilitySet {
+
+  /**
+   * ===================================
+   *
+   * 系统的基础功能
+   * 暂时放在 1 ~ 9
+   *
+   * ===================================
+   */
+  /*
+   * 系统是否有能力满频运行
+   */
+  optional Ability cpu_status = 1;
+  optional Ability adsp_status = 2;
+  optional Ability sdsp_status = 3;
+  optional Ability wifi_status = 4;
+  optional Ability fpv_status = 5;
+
+  /*
+   * 系统有足够的磁盘空间
+   */
+  optional Ability storage_space = 6;
+  optional Ability ota_status = 7;
+
+
+  /**
+   * ===================================
+   *
+   * 电池的基础功能
+   * 放在 10 ~ 19
+   *
+   * ===================================
+   */
+  optional Ability full_power_battery_output = 10;// not used!
+  optional Ability can_use_battery = 11;
+  optional Ability has_battery_warning = 12;
+  optional Ability has_enough_battery = 13;
+  optional Ability can_take_off = 14;
+  optional Ability can_flying = 15;
+
+  /**
+   * ===================================
+   *
+   * 影响系统的基础功能
+   * 放在 20 ~ 29
+   *
+   * ===================================
+   */
+  optional Ability capture_photo = 20;
+  optional Ability record_video = 21;
+  optional Ability image_stablization = 22;
+  optional Ability camera_status = 23;
+
+  /**
+   * ===================================
+   *
+   * 跟飞控相关的能力： 发布在端口 21001
+   * 飞行相关能力
+   * 放在 30 ~ 39
+   * 传感器可校准能力
+   * 放在 40 ~ 49
+   *
+   * ===================================
+   */
+  /*
+   * 基本飞行能力，当所有传感器都能够正确输出数据（没有检测到硬件损坏）,
+   * 并且 IMU 、电机符合正常需求即拥有此能力;
+   */
+  optional Ability flight_essential = 30;
+
+  /*
+   * 飞机可以达到良好的飞行状态，IMU振动幅值在正常范围内（飞机的桨叶和内部结构良好，无外界大风）
+   */ 
+  optional Ability flight_optimal = 31; 
+
+  /*
+   * 拥有不管是 视觉 还是 GPS 进行定位的能力, 这意味着当前飞机可以悬停还是不得不处于姿态模式
+   * 该模式不会报任何具体的异常，仅作为标志位供其他模块使用
+   */
+  optional Ability navigation_by_position = 32;
+
+  /*
+   * 拥有通过GPS进行悬停定位的能力, 要求磁力计有正常校准, 并且通过了磁力计的检查;
+   * 只有此能力在正常的情况下才能进行大片以及放开限高的设定
+   * 同时可能根据产品需求进行提示，避免用户飞得过远
+   */
+  optional Ability navigation_by_gps = 33;
+
+  /*
+   * 拥有通过视觉进行悬停定位的能力
+   * 一般情况下该能力为飞机起飞的必要条件
+   */
+  optional Ability navigation_by_vision = 34;
+
+  /*
+   * 拥有能够在地面起飞的能力
+   */
+  optional Ability takeoff_on_ground = 35;
+
+  /*
+   * 拥有能够在掌上起飞的能力
+   */
+  optional Ability takeoff_on_hand = 36;
+ 
+  /*
+   * 
+   * 能否使用IMU数据的能力，如果不，会附带上对应的异常
+   * 如果发现IMU数据不更新异常，则提醒用户及时返厂维修
+   * 只有提示IMU需要校准异常，才进行用户校准提示
+　 * 
+   */ 
+  optional Ability can_use_imu = 40; 
+  
+  /*
+   * 能否使用磁力计数据的能力，如果不，会附带上对应的异常
+   * 跟IMU类似，当磁力计报出跟校准相关的异常时候才提示用户进行校准
+   * 注意, 跟磁力计校准相关的异常有以下三种：
+   * MagCalibrationParamsNotExists
+   * MagCalibrationParamsIsWrong
+   * MagNeedCalibration
+   * 
+   */ 
+  optional Ability can_use_mag = 41; 
+
+  /* 
+   * 飞机拥有显示电池电量的能力, 即飞机翻转并且静止
+   */ 
+  optional Ability can_show_battery_capacity = 42; 
+  
+  
+  /*
+   * 飞机当前的GPS数据是否有效，即其他模块是否可以使用当前的GPS数据
+   */ 
+  optional Ability can_use_gps = 43; 
+
+  /**
+   * ===================================
+   *
+   * 避障相关能力
+   * 50 ~ 59
+   *
+   * ===================================
+   */
+  /*
+   * 拥有能够检测附近障碍物的能力
+   */
+  optional Ability obstacle_detection = 50;
+
+  /*
+   * 有能力在障碍物前刹车
+   */
+  optional Ability brake_before_obstacle = 51;
+
+  /*
+   * 有能力绕开障碍物
+   */
+  optional Ability avoid_obstacle = 52;
+
+  /**
+   * 无障碍物飞行
+   */
+  optional Ability fly_without_obstacle = 53;
+
+  /*
+   * ===================================
+   *
+   * Captain 相关能力
+   * 60 ~ 69
+   *
+   * ===================================
+   */
+  
+  /**
+   * 是否能够返航
+   */
+  optional Ability return_to_base = 60;
+
+  /**
+   * 手控飞行
+   */
+  optional Ability manual_control = 61;
+
+  /**
+   * 跟拍
+   */
+  optional Ability target_follow_mode = 62;
+
+  /**
+   * 一键大片
+   */
+  optional Ability track_shot_mode = 63;
+
+  /**
+   * 自动构图
+   */
+  optional Ability smart_photo_capture = 64;
+  
+  /**
+   * tracker
+   */
+  optional Ability tracker = 65;
+
+  /**
+   * 手控模式辅助控制
+   */
+  optional Ability freestyle_assist_control = 66;
+
+  /**
+   * 允许取消降落/下降
+   */
+  optional Ability can_cancel_forceland = 67;
+
+  /**
+   * 云台相关能力
+   */
+  optional Ability can_use_gimbal = 70;
+
+  /*
+   * ===================================
+   *
+   * GES System, 限高/限远/禁飞区/限高区
+   * 80 ~ 89
+   *
+   * ===================================
+   */
+  /**
+   * 禁飞区
+   */
+  optional Ability no_fly_zone = 80;
+
+  /**
+   * 限高区
+   */
+  optional Ability limit_height = 81;
+
+  /**
+   * 基本飞行限制（限高，限远）
+   */
+  optional Ability limit_flight = 82;
+
+  /**
+   * 飞行安全系统是否可用
+   */
+  optional Ability can_flight_safety = 83;
+
+  /**
+   * EIS功能是否可用
+   */
+  optional Ability can_use_eis = 84;
+
+
+  /* EventSet */
+  map<uint32, Event> event_set = 999; // 包含所有模块的event. Key对应EventType值
+}

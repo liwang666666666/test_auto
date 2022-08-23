@@ -1,0 +1,113 @@
+syntax = "proto2";
+
+package fly_safe;
+
+/**
+ * 每个禁飞区的数据库相当于一个 ZoneSet
+ * 会标明版本号、最近更新的时间(UTC 时间) 和 这个版本所有的禁飞区信息.
+ */
+message ZoneSet {
+  required string version = 1;
+  required double last_update = 2;
+  repeated Zone zones = 3;
+}
+
+
+/**
+ * 代表一个禁飞区的信息
+ * 用来在 App 地图上进行显示
+ * 用来在 Captain 上计算禁飞区的距离和位置
+ */
+message Zone {
+
+  /**
+   * 禁飞区的数据来源, 表明我们从哪里得到这个禁飞区数据
+   */
+  enum DataSource {
+    AirMap = 0;
+    Other = 1;
+  }
+
+  /**
+   * 当前禁飞区区域的类型，如机场、监狱等地理位置的种类;
+   */
+  enum Type {
+    Pending = 0; //待定
+  }
+
+  required uint64 id = 1; // 唯一的禁飞区 id
+  required string name = 2; // 禁飞区名字
+  optional string description = 3; // 禁飞区相关描述
+
+  optional float begin_at = 6; // 起始时间
+  optional float end_at = 7; // 结束时间
+  optional float last_updated = 8;
+
+  optional DataSource data_source = 11; // 禁飞区数据来源
+  optional Type type = 12; // 禁飞区种类
+  optional string country = 13; // 国家
+  optional string city = 14; // 城市
+
+  optional double longitude = 21; // 经度
+  optional double latitude = 22; // 纬度
+  optional float height = 23; // 高度 ?
+
+  // 子区域, 子区域是设置飞行限制行为的最小单位
+  // 一个禁飞区可能会有多个不同限制的区域组成
+  repeated Area sub_areas = 30; 
+}
+
+/**
+ * 限制的种类
+ */
+enum LimitType {
+  NoFly = 0; // 禁飞区
+  HeightLimit = 1; // 限高区
+  Authorization =2; // 授权区
+  Warning = 3; // 警示区
+  StrengthenWarning = 4; // 加强警示区
+  RegulationsLimit = 5; // 法规限制区
+  RecommendFly = 6; // 推荐飞行区
+}
+
+/**
+ * 坐标, 经纬度是 WGS-84 坐标系
+ */
+message Coordinate {
+  required double longitude = 1; // 经度, 注意，这里必须是 Double 类型
+  required double latitude = 2; // 纬度, 注意，这里必须是 Double 类型
+}
+
+/**
+ * 一个最小的限制区域单位
+ */
+message Area {
+  /**
+   * 这个区域的形状，不同的形状， points 代表的含义不同
+   * 当为限高区时， height 才有意义.
+   */
+  enum Shape {
+    /**
+     * 多边形
+     * 对于多边形，points 中为一系列坐标点，坐标点按照顺序，首尾相连，构成一个多边形
+     * 
+     * 最后一个点会和第一个点相连，将多边形封闭
+     * 此时，radius 可忽略;
+     */
+    Polygon = 0; 
+
+    /**
+     * 圆形
+     * 此时，points 中有不小于 1 个点，每个点都有经纬度和半径;
+     */
+    Circle = 1; // 圆形
+  }
+
+  required Shape shape = 1; // 禁飞区形状，形状决定了 points 所代表的含义.
+  required LimitType limit_type = 2; // 限制类型
+  repeated Coordinate points = 3; // 构成形状的多个点
+  optional double longitude = 4; // 圆心坐标, 经度, 注意，这里必须是 Double 类型
+  optional double latitude = 5; // 圆心坐标, 纬度, 注意，这里必须是 Double 类型
+  optional float radius = 6; // 半径，可选
+  optional float height = 7; // 高度，可选
+}

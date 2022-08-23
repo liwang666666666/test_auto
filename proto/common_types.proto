@@ -1,0 +1,1085 @@
+syntax = "proto2";
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+/***************************************
+* hover ConnectType
+****************************************/
+enum ConnectType {
+    CONNECT_TYPE_UNKNOWN        = 0; // unknown
+    CONNECT_TYPE_APP            = 1;
+    CONNECT_TYPE_SR             = 2; // small remoter
+    CONNECT_TYPE_BR             = 3; // big remoter
+    CONNECT_TYPE_APP_BR         = 4; // app + big remoter
+    CONNECT_TYPE_FLYKIT         = 5; // flykit
+}
+
+message GitResponse {
+  // commit sha
+  required string commit_sha = 1;
+  // branch
+  required string branch = 2;
+  // tag
+  required string tag = 3;
+  // build config
+  optional string build_config = 4;
+  // bootloader git sha
+  optional string bootloader_git_sha = 5;
+  // bootloader crc32
+  optional uint32 bootloader_crc32 = 6;
+}
+
+message Empty {
+}
+
+message SystemState {
+  // battery soc percent
+  optional int32 battery_soc_pct = 1;
+  // is charging
+  optional bool charging = 2;
+  // is ble connected
+  optional bool ble_connected = 3;
+  // main SOC temperature
+  optional int32 main_soc_temperature_c = 4;
+  // wifi temperature
+  optional int32 wifi_temperature_c = 5;
+  // used storage percentage
+  optional float storage_in_user_pct = 6;
+  // ble rssi
+  optional int32 ble_rssi = 7;
+}
+
+
+message MediaCountsMessage {
+  // Every time we record media we increasing this number. This number reset on each pairing.
+  // This number might be reset on some crashes or on system restart. If Cheerios reported different media counts
+  // number, Snapchat App will ask for MediaRequest (media list).
+
+  // video count
+  optional uint32 videos = 1;
+  // photo count
+  optional uint32 photos = 2;
+}
+
+message Range {
+  // the start index
+  required uint32 start = 1;
+  // range length
+  required uint32 len = 2;
+}
+
+message WifiParams {
+  // Wifi setting
+  enum WifiSetting {
+    // DISABLED
+    DISABLED_UNSET = 0;
+    // AP
+    AP = 1;
+    // STA
+    STA = 2;
+    // P2P
+    P2P = 3;
+    // SCAN
+    SCAN = 4;
+  }
+
+  // Wifi frequency
+  enum WifiFrequencyStrategy {
+    // BEST AVAILABLE
+    USE_BEST_AVAILABLE_UNSET = 0;
+    // 2_4GHZ only
+    USE_2_4GHZ_ONLY = 1;
+  }
+  // wifi setting type
+  required WifiSetting type = 1;
+  // ssid
+  optional string ssid = 2;
+  // password
+  optional string password = 3;
+  // frequency
+  optional uint32 frequency = 4;
+  // Represents 2 byte code (i.e. US - USA, CH - Switzerland, etc.)
+  optional string country = 5;
+  // frequency strategy
+  optional WifiFrequencyStrategy frequency_strategy = 6;
+}
+
+message BatteryStatusResponse {
+  // state of charge, relative to its capacity, amount 0 - 100
+  optional int32 soc = 1;
+  // voltage of battery
+  optional int32 voltage = 2;
+  // temperature of battery
+  optional int32 temp = 3;
+  // current of battery
+  optional int32 current = 4;
+}
+
+message CrashReportDetails {
+  // code file name in which the crash occured
+  optional string filename = 1;
+  // crash line number
+  optional uint32 line_number = 2;
+  // any additional info
+  optional string crash_description = 3;
+  // crash error code
+  optional uint32 error_code = 4;
+}
+
+message CrashReport {
+  // logs leading up to the crash
+  optional string log_payload = 1;
+  // crash report object
+  optional CrashReportDetails crash_report = 2;
+}
+
+message LogsResponse {
+  // zipped logs file data
+  optional bytes logs_zipped_data = 1;
+}
+
+message LocationData {
+  // latitude
+  optional float latitude = 1;
+  // longitude
+  optional float longitude = 2;
+  // speed in meters per second
+  optional uint32 speed_mps = 3;
+  // utc timestamp
+  optional uint64 utc_time = 4;
+  // heading in degrees
+  optional int32 heading_deg = 5;
+  // height in meters
+  optional int32 height_mm = 6;
+  // horizontal accuracy
+  optional uint32 h_acc_mm = 7;
+  // vertical accuracy
+  optional uint32 v_acc_mm = 8;
+}
+
+message TemperatureResponse {
+  // temperatur status enum
+  enum TemperatureStatus {
+    // normal temperature
+    TEMPERATURE_NORMAL_UNSET = 0;
+    // low temperature
+    TEMPERATURE_LOW = 1;
+    // high temperature
+    TEMPERATURE_HIGH = 2;
+  }
+  // main soc temperature
+  required float main_soc_temp_c = 1;
+  // img sensor temperature
+  optional int32 image_sensor_temp_c = 2;
+  // temperature status
+  optional TemperatureStatus status = 3;
+}
+
+// Message containing a nonce used by message encryption
+message EncryptionNonceExchange {
+  // Communication channel type
+  enum CommChannelType {
+    // Qualcomm BLE
+    COMM_CHANNEL_BLE_QCA = 2;
+    // Qualcomm WiFi
+    COMM_CHANNEL_WIFI_QCA = 3;
+    // Qualcomm BTC
+    COMM_CHANNEL_BTC_QCA = 4;
+    // Host to device
+    COMM_CHANNEL_HOST_TO_DEVICE = 16;
+  }
+  // Nonce bytes
+  optional bytes nonce = 1;
+  // Comm channel
+  optional CommChannelType channel_id = 2;
+}
+
+// OTA update request type enum
+enum OTAUpdateRequestType {
+  // Unset
+  TYPE_UNSET = 0;
+  // Get current version
+  GET_CURRENT_VERSION = 1;
+  // Apply delta patch
+  APPLY_DELTA_PATCH = 2;
+  // Apply full OTA
+  APPLY_FULL_OTA = 3;
+  // Get checksum md5 sha
+  GET_CHECKSUM_MD5_SHA = 4;
+  // Cancel
+  CANCEL = 5;
+  // Reboot and switch partition
+  REBOOT_AND_SWITCH_PARTITION = 6;
+}
+
+message OTAUpdateRequest {
+  // Request type
+  optional OTAUpdateRequestType request_type = 1;
+}
+
+// Update-related events/statuses
+enum OTAUpdateEventType {
+  // Update has been successfully initiated
+  UPDATE_EVENT_STARTED = 1;
+  // Update has ended, successfully
+  // or otherwise, error is valid
+  UPDATE_EVENT_FINISHED = 2;
+  // Update progress, pct is valid
+  UPDATE_EVENT_PROGRESS = 3;
+  // Device is rebooting per request
+  // Synchronous, error is valid
+  UPDATE_EVENT_REBOOT = 4;
+}
+
+// Event sent for the asynchronous part of the
+// OTA update
+message OTAUpdateEventData {
+  // OTA error states enum
+  enum OTAError {
+    // Unset
+    UNSET = 0;
+    // Low disk space
+    LOW_DISK_SPACE = 1;
+    // Low battery
+    LOW_BATTERY = 2;
+    // Apply error
+    APPLY_ERROR = 3;
+    // Get checksum error
+    GET_CHECKSUM_ERROR = 4;
+    // Unzip error
+    UNZIP_ERROR = 5;
+    // OS version mismatch
+    OS_VERSION_MISMATCH = 6;
+    // Signature not verified
+    SIGNATURE_NOT_VERIFIED = 7;
+  }
+  // OTA update event type
+  optional OTAUpdateEventType update_event = 1;
+  // Current update percentage
+  optional int32 pct = 2;
+  // Error for OTA if applicable
+  optional OTAError error = 3;
+}
+
+message OTAUpdateResponse {
+  // required
+  optional OTAUpdateRequest orig_request_type = 1;
+  oneof response {
+    // Synchronous response
+    OTAUpdateEventType status = 2;
+    // GET_CURRENT_VERSION
+    string current_version = 3;
+    // GET_CHECKSUM_MD5_SHA
+    string checksum = 4;
+  }
+}
+
+message FirmwareUpdateUploadRequest {
+  // Required. Should contain data to write to update file.
+  // If field is not specified, an error will be returned and no filesystem changes will occur.
+  optional bytes data = 1;
+  // Required.
+  // We will write data to file position starting at byte startPos (0 based), overwriting
+  // any existing data in range [startPos, startPos + len(data)), only creating a new file if one did not exist
+  // previously.
+  // Preconditions if included: (Violations will result in an error returned and no filesystem changes)
+  // startPos <= size of current file on disk
+  // if overwriteExistingFile == true, startPos must be 0.
+  optional uint32 start_pos = 2;
+  // Required.
+  // If true, new file will be created overwriting old one and startPos must be 0.
+  // If false, new file will still be created if one does not exist.
+  optional bool overwrite_existing_file = 3;
+}
+
+message FirmwareUpdateUploadResponse {
+  // Upload in progress. Size of the file uploaded so far
+  optional uint32 ota_uploaded_file_size = 1;
+}
+
+// irrelevant
+message CaptainStateFlyingManual {}
+
+// pre-takeoff
+message CaptainStatePreTakeOff {}
+
+// taking off
+message CaptainStateTakingOff {}
+
+// landing
+message CaptainStateLanding {
+  // landing enum
+  enum Landing {
+    // landing
+    CAPTAIN_STATE_LANDING_NORMAL = 1;
+    // emergency landing
+    CAPTAIN_STATE_LANDING_EMERGENCY = 2;
+    // waiting 5 sec before landing
+    CAPTAIN_STATE_LANDING_PREPARING = 3;
+  }
+  // landing enum value
+  optional Landing landing = 1;
+}
+
+// idle
+message CaptainStateIdle {}
+
+// flying trajectory
+message CaptainStateFlyingTraj {
+  // trajectory enum
+  enum TrajectorySubstate {
+    // going to start point
+    CAPTAIN_STATE_FLYINGTRAJ_GOING_TO_TRAJ_START_POINT  = 1;
+    // trajectory following
+    CAPTAIN_STATE_FLYINGTRAJ_TRAJECTORY_FOLLOWING       = 2;
+    // going back to start point
+    CAPTAIN_STATE_FLYINGTRAJ_FLYING_BACK_NORMAL         = 3;
+    // going back to start point (emergency)
+    CAPTAIN_STATE_FLYINGTRAJ_FLYING_BACK_EMERGENCY      = 4;
+    // hovering
+    CAPTAIN_STATE_FLYINGTRAJ_HOVERING                   = 5;
+  }
+
+  // trajectory task enum
+  enum TrajectoryTask {
+    // fadeaway path task
+    CAPTAIN_TRAJECTORY_TASK_FADEAWAY            = 1;
+    // tripod task, drone not moving
+    CAPTAIN_TRAJECTORY_TASK_TRIPOD              = 2;
+    // Orbit path task
+    CAPTAIN_TRAJECTORY_TASK_ORBIT               = 3;
+    // Follow task
+    CAPTAIN_TRAJECTORY_TASK_FOLLOW              = 4;
+  }
+
+  // current trajectory substate
+  optional TrajectorySubstate substate = 1;
+  // current trajectory task
+  optional TrajectoryTask task = 2;
+}
+
+message CaptainInfo {
+    /* Only one of these set */
+  oneof response {
+    // taking off state
+    CaptainStateTakingOff         taking_off          = 1;
+    // landing state
+    CaptainStateLanding           landing             = 2;
+    // idle state
+    CaptainStateIdle              idle                = 3;
+    // flying manual state
+    CaptainStateFlyingManual      flying_manual       = 4;
+    // flying trajectory state
+    CaptainStateFlyingTraj        flying_traj         = 5;
+    // pre takeoff state
+    CaptainStatePreTakeOff        pre_takeoff         = 6;
+  }
+}
+
+message StorageCapacity {
+  // available bytes
+  optional int64 available_bytes = 1;
+  // total bytes
+  optional int64 total_bytes = 2;
+}
+
+message OTAScheduledUpdate {
+    // target hash for scheduled update
+    optional string target_hash = 1;
+    // target version tag for sche+duled update
+    optional string target_version_tag = 2;
+    // utc time from midnight in seconds when update
+    // window should begin
+    optional uint32 utc_time_update_window_start = 3;
+    // utc time from midnight in seconds when update
+    // window should end
+    optional uint32 utc_time_update_window_stop = 4;
+    // flag to determine if update is full update
+    optional bool is_full_update = 5;
+}
+
+message OTACancelScheduledUpdateResponse {
+  // Used to specify if the scheduled update was cancelled successfully
+  optional bool success = 1;
+}
+
+message DisableFlightRequest {
+  // Used to specify if flight should be enabled or disabled
+  optional bool disable = 1;
+}
+
+message DisableFlightResponse {}
+
+message FlightModeConfig {
+  // Flight mode type
+  enum FlightModeType {
+    // Unset
+    UNSET = 0;
+    // Hover
+    // 悬停
+    HOVER = 1;
+    // Reveal
+    // 渐远
+    REVEAL = 2;
+    // Follow
+    // 跟拍
+    FOLLOW = 3;
+    // Orbit
+    // 环绕
+    ORBIT = 4;
+    // OverHead
+    // 俯拍
+    OVERHEAD = 5;
+    // Custom
+    CUSTOM = 6;
+    // Manual
+    MANUAL = 255;
+  }
+  // Flight mode type variable
+  optional FlightModeType type = 1;
+}
+
+message TrajectoryTypeParams {
+  // Follow trajectory type setting
+  enum FollowTrajectoryType {
+    // Unset
+    FOLLOW_TRAJ_UNSET = 0;
+    // 常规
+    FOLLOW_TRAJ_NORMAL = 1;
+    // 定向
+    FOLLOW_TRAJ_PARALLEL = 2;
+  }
+  // Overhead trajectory type setting
+  enum OverheadTrajectoryType {
+    // Unset
+    OVERHEAD_TRAJ_UNSET = 0;
+    // 只俯拍
+    OVERHEAD_TRAJ_PICTURE = 1;
+    // 俯拍+旋转
+    OVERHEAD_TRAJ_PIC_ROTATE = 2;
+  }
+
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify the trajectory type
+  oneof trajectory_type {
+    FollowTrajectoryType follow = 2;
+    OverheadTrajectoryType overhead = 3;
+  }
+}
+
+message DurationParams {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify the duration in seconds or orbits
+  optional uint32 duration = 2;
+}
+
+message VideoResolutionParams {
+  // Video resolution setting
+  enum Resolution {
+    // Unset
+    UNSET = 0;
+    // Medium Resolution (1080p)
+    MEDIUM_RESOLUTION = 1;
+    // High Resolution (2.7k)
+    HIGH_RESOLUTION = 2;
+    // 1440p Resolution
+    RESOLUTION_1440P = 3;
+  }
+  // Video framerate setting
+  enum Framerate {
+    // Unset
+    FRAMERATE_UNSET = 0;
+    FRAMERATE_30FPS = 1;
+    FRAMERATE_60FPS = 2;
+  }
+
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Video resolution
+  optional Resolution res = 2;
+  // Video fps
+  optional Framerate fps = 3;
+}
+
+message PhotoResolutionParams {
+  // Photo resolution setting
+  enum Resolution {
+    // Unset
+    UNSET = 0;
+    // Medium Resolution (5MP)
+    MEDIUM_RESOLUTION = 1;
+    // High Resolution (12MP)
+    HIGH_RESOLUTION = 2;
+  }
+
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Photo resolution
+  optional Resolution res = 2;
+}
+
+message PreviewResolutionParams {
+  // Preview resolution setting
+  enum Resolution {
+    // Unset
+    UNSET = 0;
+    // Low Resolution (720p)
+    LOW_RESOLUTION = 1;
+    // Medium Resolution (1080p)
+    MEDIUM_RESOLUTION = 2;
+  }
+
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Preview resolution
+  optional Resolution res = 2;
+}
+
+message CameraFramerateParams {
+  // Framerate setting
+  enum Framerate {
+    // Unset
+    FRAMERATE_UNSET = 0;
+    FRAMERATE_30FPS = 1;
+    FRAMERATE_60FPS = 2;
+  }
+
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Camera collect framerate
+  optional Framerate fps = 2;
+}
+
+message DistanceParams {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Float value of distance in meters
+  optional float meters = 2;
+}
+
+message HeightParams {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Float value of height in meters
+  optional float meters = 2;
+}
+
+message AngleParams {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // unit: degree
+  optional float degrees = 2;
+}
+
+message CaptureTypeParams {
+  // Capture Types
+  enum CaptureType {
+    // Unset
+    UNSET = 0;
+    // Picture
+    PICTURE = 1;
+    // Video
+    VIDEO = 2;
+    // Picture and Video
+    PICTURE_AND_VIDEO = 3;
+    // Continuous Picture
+    CONTINUOUS_PICTURE = 4;
+  }
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Capture Type
+  optional CaptureType capture_type = 2;
+}
+
+message TrackingParams  {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify if face/body tracking is active
+  optional bool tracking = 2;
+}
+
+message HDRParams  {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify if HDR is active
+  optional bool hdr_enabled = 2;
+}
+
+message MFNRParams  {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify if mfnr is active
+  optional bool mfnr_enabled = 2;
+}
+
+message RAWParams  {
+  // Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Used to specify if raw is active
+  optional bool raw_enabled = 2;
+}
+
+message RemainingFlightInfo {
+  // Required.
+  // remaining flight time in seconds
+  optional uint32 remaining_flights_time = 1;
+  // Required.
+  // estimated flight time for a single flight
+  optional uint32 estimated_flight_time = 2;
+  // Required.
+  // current flight mode
+  optional FlightModeConfig current_flight_mode = 3;
+}
+
+message FlightStatusError {
+  // Error types
+  enum Error {
+    // Unset
+    UNSET = 0;
+    // Take off other error
+    TAKEOFF_FC_OTHER_ERROR = 1;
+    // Take off fc initiating
+    TAKEOFF_FC_INITIATING = 2;
+    // Take off drone is not level
+    TAKEOFF_DRONE_IS_NOT_LEVEL = 3;
+    // Take off drone big shaking
+    TAKEOFF_DRONE_BIG_SHAKING = 4;
+    // Take off sensor error
+    TAKEOFF_SENSOR_ERROR = 5;
+    // Take off not tracking
+    TAKEOFF_NOT_TRACKING = 6;
+    // Force land drone stick on top
+    FORCE_LAND_DRONE_STICK_ON_TOP = 7;
+    // Force land drone vertical collision
+    FORCE_LAND_DRONE_VERT_COLLISION = 8;
+    // Force land drone horizontal collision
+    FORCE_LAND_DRONE_HORI_COLLISION = 9;
+    // Force land drone big vibration
+    FORCE_LAND_DRONE_BIG_VIBRATION = 10;
+    // Force land big wind disturbance
+    FORCE_LAND_BIG_WIND_DISTURBANCE = 11;
+    // Force land motor saturated
+    FORCE_LAND_MOTOR_SATURATED = 12;
+    // Battery low power
+    BATTERY_LOW_POWER = 13;
+    // Take off update pending
+    TAKEOFF_UPDATE_PENDING = 14;
+    // Force land storage full
+    FORCE_LAND_STORAGE_FULL = 15;
+    // Calibration required
+    CALIBRATION_REQUIRED = 16;
+    // Force land ground too close
+    FORCE_LAND_GROUND_TOO_CLOSE = 17;
+    // Take off temperature too hot
+    TAKEOFF_TEMPERATURE_TOO_HOT = 18;
+    // Take off temperature too cold
+    TAKEOFF_TEMPERATURE_TOO_COLD = 19;
+    // Take off storage full
+    TAKEOFF_STORAGE_FULL = 20;
+    // Take off failed because there is an active Cheerios firmware update.
+    // It occurs before the takeoff sequence, immediately after button press.
+    TAKEOFF_UPDATE_IN_PROGRESS = 21;
+  }
+  // Required. The list of error types from Cheerios. It is an empty array if there is no error.
+  repeated Error errors = 1;
+}
+
+message VideoFormatParams {
+  // Video format setting
+  enum VideoFormat {
+    // Unset
+    UNSET = 0;
+    // AVC
+    AVC = 1;
+    // HEVC
+    HEVC = 2;
+  }
+  // Required. Used to specify the flight mode being configured
+  optional FlightModeConfig flight_mode = 1;
+  // Required. Video format
+  optional VideoFormat format = 2;
+}
+
+message CustomFlightMode {
+  // Used to specify custom flight mode, sending "custom" will clear
+  optional FlightModeConfig flight_mode = 1;
+}
+
+message USBConnectionStatus {
+  // Required.
+  // if Cheerios is connected via USB
+  optional bool is_connected_usb = 1;
+}
+
+/* Error */
+message ErrorResponse {
+  // Error codes
+  enum ErrorCode {
+    // Unset
+    UNSET = 0;
+    // Invalid request
+    INVALID_REQUEST = 1;
+    // No handler
+    NO_HANDLER = 2;
+    // Hardware error
+    HW_ERROR = 3;
+    // IO error
+    IO_ERROR = 4;
+    // Internal error
+    INTERNAL_ERROR = 5;
+    // Qualcomm is down
+    QCOM_IS_DOWN = 6;
+    // Request is cancelled
+    REQUEST_CANCELED = 7;
+    // Content unavailable
+    CONTENT_UNAVAILABLE = 8;
+  }
+  // Error code
+  required ErrorCode error_code = 1;
+  // Error description string. Optional.
+  optional string description = 2;
+}
+
+// Request a specific log file
+message LogFileTransferRequest {
+    // Required. The name of the requested log file.
+    optional string name = 1;
+    // Portion of log file to transfer. If not specified, the entire file is sent.
+    optional Range range = 2;
+}
+
+// The type of log request
+enum LogRequestType {
+    // Unset
+    LOG_REQUEST_UNSET = 0;
+    // Get debugging file list
+    DEBUGGING_FILE_LIST = 1;
+    // Get a specific debugging file. The LogRequest with this type must contain LogFileTransferRequest.
+    GET_DEBUGGING_FILE = 2;
+    // Delete all debugging log files
+    DELETE_DEBUGGING = 3;
+    // Get analytics file list
+    ANALYTICS_FILE_LIST = 4;
+    // Get a specific analytics file. The LogRequest with this type must contain LogFileTransferRequest.
+    GET_ANALYTICS_FILE = 5;
+    // Delete all analytics log files
+    DELETE_ANALYTICS = 6;
+}
+
+// Request log file
+message LogRequest {
+    // Required. The type of log request.
+    optional LogRequestType type = 1;
+    // The details of the log file to be loaded.
+    optional LogFileTransferRequest log_file_transfer_request = 2;
+}
+
+// The metadata for the log file.
+message LogFileMetadata {
+    // Required.
+    optional string name = 1;
+    // Required, in Bytes.
+    optional uint32 size = 2;
+}
+
+// The actual contents of the log file.
+message LogData {
+    // Required. The name of the requested log file. Required.
+    optional string name = 1;
+    // Required. The requested range for the log file.
+    optional Range requested_range = 2;
+    // Required. Portion of log file the data field corresponds to.
+    optional Range actual_range = 3;
+    // Required. Contents of the log request.
+    optional bytes data = 4;
+}
+
+// Response from device for log request.
+message LogResponse {
+    // Required. The request type of the original log request.
+    optional LogRequestType orig_req_type = 1;
+    // A list of log file metadata. Response from DEBUGGING_FILE_LIST or ANALYTICS_FILE_LIST request.
+    repeated LogFileMetadata log_file_metadata = 2;
+    // Response from GET_DEBUGGING_FILE or GET_ANALYTICS_FILE request.
+    optional LogData log_data = 3;
+    // Response from DELETE_DEBUGGING or DELETE_ANALYTICS request.
+    optional bool deleted_log_file = 4;
+}
+
+// Request params to keep device active.
+message KeepDeviceActiveParams {}
+
+// Result from keep device active request.
+message KeepDeviceActiveResult {}
+
+// IMU calibration directions enum
+enum CalibrationDirection {
+  // Unset
+  DIR_UNSET = 0;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_X_UP
+  X_UP = 1;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_X_DOWN
+  X_DOWN = 2;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_Y_UP
+  Y_UP = 3;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_Y_DOWN
+  Y_DOWN = 4;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_Z_UP
+  Z_UP = 5;
+  //SENSOR_IMU_CALIBRATE_DIRECTION_Z_DOWN
+  Z_DOWN = 6;
+}
+
+// IMU calibration result of a direction.
+message CalibrationResult {
+  // Required. The direction.
+  required CalibrationDirection direction = 1;
+  // Required. Indicates whether the direction is calibrated or not.
+  required bool finished = 2;
+}
+
+// IMU calibration status.
+message CalibrationStatus {
+  // Calibration state enum
+  enum CalibrationState {
+    // Unset
+    CALI_UNSET = 0;
+    // The calibration finished.
+    CALI_OK = 1;
+    // The calibration failed.
+    CALI_ERROR = 2;
+    // The calibration was cancelled.
+    CALI_IDLE = 3;
+    // Calibrating.
+    CALI_DOING= 4;
+  }
+  // Required. The calibration results of each direction.
+  repeated CalibrationResult results = 1;
+  // Current drone position.
+  optional CalibrationDirection direction = 2;
+  // Required. The current calibration state.
+  required CalibrationState state = 3;
+}
+
+// Start IMU calibration request.
+message StartCalibrationRequest {}
+
+// Start IMU calibration response.
+message StartCalibrationResponse {}
+
+// Stop IMU calibration request.
+message StopCalibrationRequest {}
+
+// Stop IMU calibration response.
+message StopCalibrationResponse {}
+
+// Activate lost mode request.
+message ActivateLostModeRequest {}
+
+// Activate lost mode response.
+message ActivateLostModeResponse {}
+
+// Deactivate lost mode request.
+message DeactivateLostModeRequest {}
+
+// Deactivate lost mode response.
+message DeactivateLostModeResponse {}
+
+// Get lost mode state request.
+message GetLostModeStateRequest {}
+
+// Get lost mode state response.
+message GetLostModeStateResponse {
+  // Indicates whether lost mode is active.
+  required bool active = 1;
+}
+
+// Sent when lost mode begins.
+message LostModeBeginEvent{
+}
+
+// Sent when lost mode ends.
+message LostModeEndEvent {
+  // The causes of lost mode deactivation
+  enum Cause {
+    // Unset
+    UNSET = 0;
+    // The button is pressed on the device.
+    BUTTON_PRESSED = 1;
+    // The dial is turned to any position (including OFF) on the device.
+    DIAL_TURNED = 2;
+    // An 1 minute timeout (no action is taken by the user for 1 minute).
+    TIMEOUT = 3;
+    // Deactivated from the application side.
+    APP = 4;
+  }
+  // Indicates the cause of deactivation.
+  required Cause cause = 1;
+}
+
+// Events sent when lost mode state changes.
+message LostModeEvent {
+  oneof event {
+    // Begin event.
+    LostModeBeginEvent begin_event = 1;
+    // End event.
+    LostModeEndEvent end_event = 2;
+  }
+}
+
+// Settings values for a flight mode
+message FlightModeSettings  {
+  // The flight mode that these settings apply to
+  optional FlightModeConfig flight_mode = 1;
+  // Duration in seconds or number of orbits
+  optional uint32 duration = 2;
+  // Float value of distance in meters
+  optional float distance_meters = 3;
+  // Capture Photos/Videos/both
+  optional CaptureTypeParams.CaptureType capture_type = 4;
+  // If face/body tracking is active
+  optional bool tracking = 5;
+  // The trajectory type in a flight mode
+  optional TrajectoryTypeParams trajectory_type = 6;
+  // Float value of height in meters
+  optional HeightParams height_meters = 7;
+  // The angle params for OVERHEAD flight mode
+  optional AngleParams angle_degrees = 8;
+}
+
+message FlightSettings  {
+  // Flight path set for custom flight mode
+  optional CustomFlightMode custom_flight_mode = 1;
+  // Settings for hover flight mode
+  optional FlightModeSettings hover_settings = 2;
+  // Settings for reveal flight mode
+  optional FlightModeSettings reveal_settings = 3;
+  // Settings for follow flight mode
+  optional FlightModeSettings follow_settings = 4;
+  // Settings for orbit flight mode
+  optional FlightModeSettings orbit_settings = 5;
+  // Settings for overhead flight mode
+  optional FlightModeSettings overhead_settings = 6;
+  // Settings for manual flight mode
+  optional FlightModeSettings manual_settings = 7;
+  // Settings for custom flight mode
+  optional FlightModeSettings custom_settings = 8;
+}
+
+message CameraPhotoParamsSettings {
+  // Photo Resolution Parameters
+  optional PhotoResolutionParams photo_resolution = 1;
+  // HDR enable flag
+  optional bool hdr_enabled = 2;
+  // raw enable flag
+  optional bool raw_enabled = 3;
+  // MFNR enable flag
+  optional bool mfnr_enabled = 4;
+  // Camera framerate
+  optional CameraFramerateParams camera_framerate = 5;
+}
+
+message CameraVideoParamsSettings {
+  // Video Format Parameters
+  optional VideoFormatParams video_format = 1;
+  // Video Resolution Parameters
+  optional VideoResolutionParams video_resolution = 2;
+  // HDR enable flag
+  optional bool hdr_enabled = 3;
+}
+
+message CameraParamsSettings {
+  optional CameraPhotoParamsSettings photo_params = 1;
+  optional CameraVideoParamsSettings video_params = 2;
+}
+
+message CameraSettings {
+  // Camera Settings for hover
+  optional CameraParamsSettings hover_settings = 1;
+  // Camera Settings for reveal
+  optional CameraParamsSettings reveal_settings = 2;
+  // Camera Settings for follow
+  optional CameraParamsSettings follow_settings = 3;
+  // Camera Settings for orbit
+  optional CameraParamsSettings orbit_settings = 4;
+  // Camera Settings for overhead
+  optional CameraParamsSettings overhead_settings = 5;
+  // Camera Settings for manual
+  optional CameraParamsSettings manual_settings = 6;
+  // Camera Settings for custom
+  optional CameraParamsSettings custom_settings = 7;
+}
+
+// Heartbeat state of camera
+message CameraHeartBeatState {
+  enum CameraState {
+    NOT_USED        = 0;
+    SELF_TESTING    = 1;
+    IDLE            = 2;
+    PREVIEWING      = 3;
+    VIDEO_RECORDING = 4;
+    SNAPSHOT_TAKING = 5;
+    FAULT           = 6;
+  }
+
+  optional CameraState state = 1;
+  optional int32 video_recording_time = 2; // seconds
+}
+
+// Heartbeat state of media
+message MediaHeartBeatState {
+  // The uuid of the latest media file
+  optional string latest_uuid = 1;
+}
+
+message HeartBeatInfo {
+  // Flight Mode
+  optional FlightModeConfig flight_mode = 1;
+  // System information
+  optional SystemState system_state = 2;
+  // Current Captain info
+  optional CaptainInfo captain_info = 3;
+  // Current capture type
+  optional CaptureTypeParams capture_type = 4;
+  // Camera state
+  optional CameraHeartBeatState camera_state = 5;
+  // Media state
+  optional MediaHeartBeatState media_state = 6;
+}
+
+message RockerControlCommand {
+  optional int64 seq_num                           = 1; // 自增长 id 用于 udp 过滤乱序包
+  optional int64 timestamp                         = 2;
+  optional RawManualControlCommand command = 3;
+}
+
+message RawManualControlCommand{
+  optional ConnectType control_source_type         = 1;
+  optional bool is_sport_mode                      = 2;
+  optional float roll                              = 3;
+  optional float pitch                             = 4;
+  optional float thrust                            = 5;
+  optional float yaw                               = 6;
+}
+
+message CameraCountDownEvent {
+  // take photo count down a few seconds
+  optional uint32 take_photo_countdown_seconds = 1;
+}
+
+message SysEvent {
+  enum EventId {
+    UNSET = 0;
+    // 长时间待机
+    LONG_TIME_IDLE = 1;
+  }
+
+  // System event id
+  optional EventId id = 1;
+}

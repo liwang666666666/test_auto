@@ -1,0 +1,42 @@
+syntax = "proto2";
+
+package h130;
+
+// ipc:///tmp/ota_update_state.sock
+
+message OtaUpdateRequest {
+  enum ActionOption{
+      //update request
+      UPDATE_REQUEST = 1;
+      //Reboot to switch partitions
+      REBOOT_SYSTEM = 2;
+  }
+  enum UpdateType{
+      //Incremental
+      INCREMENTAL_UPDATE = 1;
+      //FULL
+      FULL_UPDATE = 2;
+
+  }
+  // Upgrade method: 1. Full amount, 2. Incremental
+  optional ActionOption action = 1;
+  optional UpdateType type = 2;
+  // Upgrade file storage path
+  optional string update_package_path = 3;
+}
+
+message OtaUpdateResponse {
+  // Error codes
+  enum ErrorReason {
+    // Low battery
+    LOW_BATTERY = 1;
+    // Data cable not connected
+    NO_CHARGING = 2;
+    // other error
+    OTHER_ERROR = 3;
+  }
+  // Reasons for upgrade execution failure
+  optional ErrorReason ota_error = 1;
+  // Execution result: true: success, false: failure
+  optional bool update_ack = 2;
+}

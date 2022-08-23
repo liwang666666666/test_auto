@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package tracker;
+
+import "base.proto";
+
+
+// TrackingMaching state
+enum TrackerState {
+  TERMINATE          = 0;   // 结束, 正常情况下不会出现
+  DETECTING          = 1;   // 跟踪检测中
+  TRACKING           = 2;   // 锁定跟踪中
+  TEMPORARILY_LOST   = 3;   // 跟踪，暂时丢失
+  PERMANENT_LOST     = 4;   // 跟踪，丢失
+}
+
+// Target tracking state，目标跟踪详细状态
+enum TargetTrackingState {
+  TRACKING_STATE_TRACKING_3D           = 0;  // 锁定跟踪
+  TRACKING_STATE_TRACKING_2D           = 1;  // 模板匹配的方式跟踪
+  TRACKING_STATE_TEMPORARILY_LOST      = 2;  // 暂时丢失
+  TRACKING_STATE_PERMANENT_LOST        = 3;  // 永久丢失
+}
+
+// Target motion state
+enum TargetMotionState {
+  TARGET_MOTION_STATE_STABLE = 0;
+  TARGET_MOTION_STATE_RAPID  = 1;
+}
+
+// Target appearance state
+enum TargetAppearanceState {
+  TARGET_APPEARANCE_STATE_STABLE  = 0;
+  TARGET_APPEARANCE_STATE_VARIOUS = 1;
+}
+
+enum TargetType {
+  TARGET_TYPE_NONE          = 0;
+  TARGET_TYPE_PERSON        = 1;
+  TARGET_TYPE_HEAD           = 2;
+}
+
+// Detecting 结果，每个目标由 index 的 rect 组成
+message TrackableTarget {
+  uint32      last_index        = 1;
+  base.Rect   target_rect       = 2;
+  base.Vec3f  roi_center        = 3; // 目标颈部关节点位置(x,y) : [0] [1]
+  base.Vec3f  eis_roi_center    = 4; // 目标颈部关节点位置(x,y) : [0] [1]
+  float       distance2Camera   = 5; // 目标距离摄像头的距离
+  TargetType  target_type       = 6; // 目标类别
+}
+
+// Tracking 状态时目标的信息
+message TrackingTarget {
+  base.Vec3f            position         = 1;   // 目标 3d 位置(不再提供)
+  base.Rect             target_rect      = 2;   // 目标包围框(比例)(x,y,w,h)取值范围[0,1],
+  float                 confidence       = 3;   // 置信度 未启用
+  TargetTrackingState   tracking_state   = 4;   // 目标跟踪状态：是否稳定跟踪
+  TargetMotionState     motion           = 5;   // 目标动作状态 未启用
+  TargetAppearanceState appearance       = 6;   // 目标可见状态 未启用
+  float                 distance2Camera  = 7;  // 目标距离摄像头的距离
+  base.Vec3f            roi_center       = 8;  // 目标颈部关节点位置(x,y), z 为 tracker 对此点的信心度
+  base.Vec3f            eis_roi_center   = 9;  // 目标颈部关节点位置(x,y), z 为 tracker 对此点的信心度
+  float                 originalDistance = 10; // 根据检测框计算出来的原始距离
+  TargetType            target_type      = 11; // 目标类别
+  bool                  group_tracking_status = 12; // 1为group_tracking状态,0为非group_tracking状态(即单人跟踪)
+  base.Vec3f            group_tracking_roi_center = 13; // group区域的roi_center
+  float                 updateDistance   = 14; // 用于Tracker同步距离更新到Captain(比如跟拍跟丢找回)
+}
+
+// -----------------------------------------------------------------------
+// main message: 给 App 和 Caption 的内容
+message Frame {
+  TrackerState             state               = 1;   // Tracker 工作状态：跟踪,跟丢,构图...
+  uint32                   id                  = 2;   // frame_id
+  repeated TrackableTarget trackable_targets   = 3;   // 可跟踪对象列表
+  repeated TrackingTarget  tracking_targets    = 4;   // 正在跟踪对象列表, 目前情况下,最多一个
+  repeated float           trans_matrix        = 6;   // eis trans matrix
+  uint64                   timestamp           = 7;   // frame timestamp
+  uint32                   frame_width         = 8;   // 做检测图像的宽
+  uint32                   frame_height        = 9;   // 做检查图像的高
+}
+
+// command for ce
+enum TrackCommandAction {
+  TRACK_COMMAND_ACTION_START = 0; // 开启Tracker
+  TRACK_COMMAND_ACTION_RESET = 1; // 重置Tracker，回到检测状态
+  TRACK_COMMAND_ACTION_STOP  = 2; // 关闭Tracker
+  TRACK_COMMAND_ACTION_REDUCE_FRAMERATE  = 3; // 降低Tracker帧率
+  TRACK_COMMAND_ACTION_RESTORE_FRAMERATE  = 4; // 恢复Tracker帧率
+}
+
+// app -> ce -> tracker: 启动 target track
+message TrackSelectedTarget {
+  uint32  FrameId     = 1;
+  uint32  TargetIndex = 2;
+}
+
+enum CaptainTaskType {
+  CAPTAIN_TASK_TYPE_NONE                      = 0;
+  CAPTAIN_TASK_TYPE_TRAJECTORY_HOVER          = 1; // 定点
+  CAPTAIN_TASK_TYPE_TRAJECTORY_EVACUATION     = 2; // 退飞
+  CAPTAIN_TASK_TYPE_TRAJECTORY_ORBIT          = 3; // 环绕
+  CAPTAIN_TASK_TYPE_TRAJECTORY_FOLLOW         = 4; // 跟拍
+  CAPTAIN_TASK_TYPE_TRAJECTORY_FACTORY          =5;// 产测
+}
+
+enum CaptainEventType {
+  CAPTAIN_EVENT_TYPE_NONE                     = 0;
+  CAPTAIN_EVENT_TYPE_CHANGE_TASK              = 1; // 切换到某任务
+}
+
+message CaptainEvent {
+  CaptainTaskType task_type           = 1;
+  CaptainEventType event_type         = 2;
+}
+
+message TrackerCommand {
+  oneof command{
+    TrackCommandAction         track_action   = 1;  // 启动 tracker, 停止跟踪,关闭tracker
+    TrackSelectedTarget        tack_target    = 2;  // 选择要跟踪的人
+    CaptainEvent               captain_event  = 3;
+  }
+}
+
+message TrackerCommandAck {
+  bool isSuccess = 1;
+}

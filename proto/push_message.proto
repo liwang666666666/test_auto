@@ -1,0 +1,60 @@
+syntax = "proto2";
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "events.proto";
+import "common_types.proto";
+
+message PushMessage {
+  // Log message
+  optional string log_message = 1;
+  // Log level
+  enum LogLevel {
+    // debug
+    DEBUG_UNSET = 0;
+    // info
+    INFO = 1;
+    // warning
+    WARNING = 2;
+    // error
+    ERROR = 3;
+    // verbose
+    VERBOSE = 4;
+  }
+
+  // If present, logMessage should also be present
+  optional LogLevel log_level = 2;
+
+  // Milliseconds since the system booted.
+  optional uint32 ms_since_boot = 3;
+
+  // Invalidated request
+  message InvalidatedRequest {
+    // request id
+    optional uint32 request_id = 1;
+    // method uuid
+    optional uint64 method_uuid = 2;
+  }
+
+  // All optional fields are in oneof to reduce struct size on the system.
+  oneof payload {
+    // invalidated request
+    InvalidatedRequest invalidated_request = 4;
+      
+    // Included when the media counts have been updated after a recording event
+    MediaCountsMessage media_counts = 5;
+
+    // Crash report
+    CrashReport crash_report = 6;
+
+    // Event message from Cheerios, emitted when a status changes.
+    EventPb event = 7;
+
+    // Requests location for camera activity
+    Empty request_location_for_camera = 8;
+  }
+}

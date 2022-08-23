@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package sensor;
+
+import "base.proto";
+
+message IMU6Axis {
+  base.Vec3f accel_bias_b = 1;
+  base.Vec3f angular_rate_bias_b = 2;
+  float temperature = 3;
+}
+
+message IMU9Axis {
+  base.Vec3f accel = 1;
+  base.Vec3f gyro = 2;
+  base.Vec3f mag = 3;
+  float temperature = 4;
+}
+
+message Mag { base.Vec3f mag = 1; }
+
+message Baro {
+  float pressure = 1;
+  float altitude = 2;
+  float temperature = 3;
+}
+
+message Sonar {
+  uint32 pulse_num = 1;
+  uint32 noise = 2;
+  uint32 falling_mm = 3;
+  uint32 dead_zone_mm = 4;
+  uint32 framenum = 5;
+  uint32 distance_mm = 6;
+}
+
+message GPS {
+  float hdop = 1;
+  uint32 num_satellite = 2;
+  float latitude = 3;
+  float longtitude = 4;
+}
+
+message Proxi { uint32 distance_mm = 1; }
+
+message Optflow {
+  int32 x = 1;
+  int32 y = 2;
+  int32 relative_size = 3;
+  int32 score = 4;
+  uint32 status = 5;
+}
+
+message VIO {
+  int32 score = 1;
+  int32 status = 2;
+  base.Vec3f velocity = 3;
+  base.Vec3f init_position = 4;
+  base.Vec4f init_quaternion = 5;
+  base.Vec3f translation = 6;
+  base.Vec4f quaternion = 7;
+}
+
+// original current read from motor ESC 
+message Motor_current {
+  float motor1 = 1; 
+  float motor2 = 2; 
+  float motor3 = 3; 
+  float motor4 = 4; 
+}
+
+message Sensor {
+  uint64 timestamp = 1;
+  IMU6Axis imu0 = 2;
+  IMU6Axis imu1 = 3;
+  Mag mag = 4;
+  Sonar sonar = 5;
+  Proxi proxi = 6;
+  GPS gps = 7;
+  Baro baro = 8;
+  Optflow optflow = 9;
+  base.Vec4f quaternion = 10;
+  Motor_current motor_current = 11; 
+}

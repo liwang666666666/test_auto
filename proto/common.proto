@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package common;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+enum MemoryType {
+    INTERNAL = 0;
+    EXTERNAL = 1;
+}
+
+// manufature info
+message ManufactureInfo {
+    string model            = 1;
+    string sn               = 2;
+    string manufacture_data = 3;
+    string hw_version       = 4;
+    string hw_id            = 5;
+    string sw_version       = 6;
+}
+
+// usage info
+message HoverUsageInfo {
+    uint32 fly_time         = 1;  // in seconds
+    uint32 fly_time_last    = 2;
+}
+
+// memory Info
+message MemoryInfo {
+    bool internal_not_exist_or_full = 1;
+    bool sdcard_not_exist_or_full = 2;
+}
+
+message WifiEvent{
+    repeated Stationinfo      ipinfo                = 1;
+}
+
+message Stationinfo{
+    int32     snr = 1;
+    int32     nf = 2;
+    string  ip = 3;
+}
+
+enum TransModeEnum {
+    NONE = 0;
+    WIFI = 1;
+    FPV  = 2;
+}
+
+message TransMode {
+    TransModeEnum mode = 1;
+}
+
+/*****************************************
+*  wifi parameters
+*****************************************/
+enum WifiFreqMode {
+    WIFI_FREQ_2_4G    = 0;
+    WIFI_FREQ_5G      = 1;
+}
+
+message WifiGetFreq {
+}
+
+message WifiSetFreq {
+	WifiFreqMode freqmode      = 1;
+}
+
+message WifiCommand {
+    oneof command {
+		WifiSetFreq    setfreq = 1;
+		WifiGetFreq    getfreq = 2;
+	}
+}
+
+message WifiCommandAck {
+    bool     is_ok             = 1;
+    oneof addition_config {
+	    WifiFreqMode freqmode  = 2;
+    }
+}
+
+/***************************************
+* time related
+****************************************/
+//todo: By now, hover only support UTC time.
+//TimeSetting is not used!!!!
+message TimeSetting {
+    int32          timezone    = 1;
+}

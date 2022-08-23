@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package h130;
+
+message WebpCommandAck {
+   optional int32   rc = 1;
+}
+
+message WebpNameToProcess {
+  optional string webp_path  = 1;
+  optional string video_name = 2;
+  optional int32  webp_count = 3;
+
+  optional string jpeg_name  = 4;
+  optional float  angle      = 5;
+  optional float  jpeg_count = 6;
+}
+
+service WebpRpc{
+    rpc NotifyJpegName      (WebpNameToProcess)        returns (WebpCommandAck);
+    rpc NotifyYuvName       (WebpNameToProcess)        returns (WebpCommandAck);
+    rpc StartVideo          (WebpNameToProcess)        returns (WebpCommandAck);
+    rpc StopVideo           (WebpNameToProcess)        returns (WebpCommandAck);
+}

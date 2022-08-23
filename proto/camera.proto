@@ -1,0 +1,546 @@
+syntax = "proto3";
+
+package camera;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "common.proto";
+
+/*****************************************
+*  camera parameters
+******************************************/
+message Resolution {
+    uint32 width = 1;
+    uint32 height = 2;
+}
+
+message Fps {
+    uint32 fps = 1;         // uint: 0.1fps
+}
+
+message Bitrate {
+    uint32 bitrate = 1;
+}
+
+enum VideoFileFormatEnum {
+    AVC     = 0;
+    HEVC    = 1;
+}
+
+message VideoFileFormat {
+    VideoFileFormatEnum fmt = 1;
+}
+
+enum VideoStabilizationModeEnum {
+    STABILIZE_OFF     = 0;
+    STABILIZE_ON      = 1;
+}
+
+message VideoStabilizationMode {
+    VideoStabilizationModeEnum mode = 1;
+}
+
+enum SnapshotFileFormatEnum {
+    JPEG    = 0;
+    RAW     = 1;
+    DNG     = 2;
+}
+
+message SnapshotFileFormat {
+    SnapshotFileFormatEnum fmt = 1;
+}
+
+message SnapshotQuality {
+    uint32 quality = 1;
+}
+
+enum SnapshotModeEnum {
+    NORMAL      = 0;
+    LONG_SHOT   = 1;
+    HDR         = 2;
+    AE_BRACKET  = 3;
+    DELAY_SHOT  = 4;
+}
+
+message SnapshotMode {
+    SnapshotModeEnum mode   = 1;
+    uint32 num_pics         = 2;
+    uint32 delay_time       = 3;
+    float aeb_step          = 4;
+}
+
+enum TouchModeEnum {
+    TOUCH_OFF     = 0;
+    TOUCH_ON      = 1;
+}
+
+message MeteringArea {
+    uint32 x0_in_percent = 1;    // [0,100]
+    uint32 y0_in_percent = 2;
+    uint32 x1_in_percent = 3;
+    uint32 y1_in_percent = 4;
+}
+
+message Touch {
+    TouchModeEnum mode      = 1;
+    MeteringArea area = 2;
+}
+
+enum ISOModeEnum {
+    ISO_AUTO    = 0;
+    ISO_HJR     = 1;
+    ISO_MANUAL  = 2;
+}
+
+message Iso {
+    ISOModeEnum mode    = 1;
+    uint32 iso          = 2;
+}
+
+message ExposureTime {
+    uint64 exp_time = 1; //uint:ns, [200ns, 2s]
+}
+
+message ExposureCompensation {
+    float compensation = 1; // [-2, +2]
+}
+
+enum HistogramModeEnum {
+    HISTOGRAM_MODE_OFF     = 0;
+    HISTOGRAM_MODE_ON      = 1;
+}
+
+message HistogramMode {
+    HistogramModeEnum   mode = 1; 
+}
+
+enum ExposureMeterModeEnum {
+    EXP_METER_MODE_FRAME_AVERAGE        = 0;
+    EXP_METER_MODE_CENTER_WEIGHTED      = 1;
+    EXP_METER_MODE_SPOT_METERING        = 2;
+    EXP_METER_MODE_SMART_METERING       = 3;
+    EXP_METER_MODE_USER_METERING        = 4;
+    EXP_METER_MODE_SPOT_METERING_ADV    = 5;
+    EXP_METER_MODE_CENTER_WEIGHTED_ADV  = 6;
+}
+
+message ExposureMeterMode {
+    ExposureMeterModeEnum   mode    = 1;
+}
+
+enum SceneModeEnum {
+    SCENE_DISABLED                  = 0;
+    SCENE_FACE_PRIORITY             = 1;
+    SCENE_ACTION                    = 2;
+    SCENE_PORTRAIT                  = 3;
+    SCENE_LANDSCAPE                 = 4;
+    SCENE_NIGHT                     = 5;
+    SCENE_NIGHT_PORTRAIT            = 6;
+    SCENE_THEATRE                   = 7;
+    SCENE_BEACH                     = 8;
+    SCENE_SNOW                      = 9;
+    SCENE_SUNSET                    = 10;
+    SCENE_STEADYPHOTO               = 11;
+    SCENE_FIREWORKS                 = 12;
+    SCENE_SPORTS                    = 13;
+    SCENE_PARTY                     = 14;
+    SCENE_CANDLELIGHT               = 15;
+    SCENE_BARCODE                   = 16;
+    SCENE_HIGH_SPEED_VIDEO          = 17;
+    SCENE_HDR                       = 18;
+    SCENE_FACE_PRIORITY_LOW_LIGHT   = 19;
+}
+
+message SceneMode {
+    SceneModeEnum mode = 1;
+}
+
+enum AutoExposureModeEnum {
+    AE_OFF                  = 0;
+    AE_ON                   = 1;
+    AE_ON_AUTO_FLASH        = 2;
+    AE_ON_ALWAYS_FLASH      = 3;
+    AE_ON_AUTO_FLASH_REDEYE = 4;
+    AE_ON_PRIORITY          = 5;
+}
+
+message AutoExposureMode {
+    AutoExposureModeEnum mode = 1;
+}
+
+enum ExposureLockModeEnum {
+    AE_LOCK_OFF     = 0;
+    AE_LOCK_ON      = 1;
+}
+
+message ExposureLockMode {
+    ExposureLockModeEnum mode = 1;
+}
+
+enum FlashModeEnum {
+    FLASH_OFF       = 0;
+    FLASH_SINGLE    = 1;
+    FLASH_TORCH     = 2;
+}
+
+message FlashMode {
+    FlashModeEnum mode = 1;
+}
+
+enum FocusModeEnum {
+    AF_OFF                  = 0;
+    AF_AUTO                 = 1;
+    AF_MACRO                = 2;
+    AF_CONTINOUS_VIDEO      = 3;
+    AF_CONTINOUS_PICTURE    = 4;
+    AF_EDOF                 = 5;
+}
+
+message FocusMode {
+    FocusModeEnum mode = 1;
+}
+
+message FocusLength {
+    float focus = 1; // 2.8: F2.8.
+}
+
+message FocusDistance {
+    float min   = 1;
+    float max   = 2;
+}
+
+enum WhiteBalanceModeEnum {
+    WB_OFF              = 0;
+    WB_AUTO             = 1;
+    WB_INCANDESCENT     = 2;
+    WB_FLUORESCENT      = 3;
+    WB_WARM_FLUORESCENT = 4;
+    WB_DAYLIGHT         = 5;
+    WB_CLOUDY_DAYLIGHT  = 6;
+    WB_TWILIGHT         = 7;
+    WB_SHADE            = 8;
+    WB_CCT              = 9; //hal3 do not have this mode
+}
+
+message WhiteBalanceMode {
+    WhiteBalanceModeEnum    mode = 1;
+    uint32                  cct  = 2;   //[2000k - 8000k]
+}
+
+enum DenoiseModeEnum {
+    DENOISE_OFF                 = 0;
+    DENOISE_FAST                = 1;
+    DENOISE_HIGH_QUALITY        = 2;
+    DENOISE_MINIMAL             = 3;
+    DENOISE_ZERO_SHUTTER_LAG    = 4;
+}
+
+message DenoiseMode {
+    DenoiseModeEnum mode = 1;
+}
+
+enum AntiBandingModeEnum {
+    BANDING_OFF         = 0;
+    BANDING_FIXED_50    = 1;
+    BANDING_FIXED_60    = 2;
+    BANDING_AUTO        = 3;
+}
+
+message AntiBandingMode {
+    AntiBandingModeEnum mode = 1;
+}
+
+message Contrast {
+    uint32 contrast = 1; //[0,100]
+}
+
+message Sharpness {
+    uint32 sharpness = 1; //[0,100]
+}
+
+message Brightness {
+    uint32 bright = 1; //[0,100]
+}
+
+message Saturation {
+    uint32 saturation = 1; //[0,100]
+}
+
+message Zoom {
+    uint32 times = 1; //[1,2,3]
+}
+
+enum FlipModeEnum {
+    FLIP_OFF    = 0;
+    FLIP_V      = 1;
+    FLIP_H      = 2;
+    FLIP_VH     = 3;
+}
+
+message FlipMode {
+    FlipModeEnum mode = 1;
+}
+
+message ViewAngle {
+    float horizontal    = 1;
+    float vertical      = 2;
+}
+
+message RtcpConfig {
+    string ip = 1;
+}
+
+enum MFNRModeEnum {
+    MFNR_DISABLE      = 0;
+    MFNR_ENABLE       = 1;
+}
+
+message MFNRConfig {
+    MFNRModeEnum mfnr = 1;
+}
+
+enum ModeEnum {
+    VIDEO = 0;
+    SNAP = 1;
+}
+
+message Mode {
+    ModeEnum mode = 1;
+    uint32 mode_func = 2;
+}
+
+message GpsCoordinates {
+    uint32 latitude    = 1; //units: 0.01度
+    uint32 longitude   = 2;
+    uint32 altitude    = 3; 
+}
+
+message GpsInfo {
+    GpsCoordinates gps_coordinates     = 1;
+    int64 gps_timestamp                = 2; 
+}
+//message VisionFaceTrackingConfig {
+//    string face_mode_file_name = 1;
+//}
+
+enum CameraId {
+    Camera0 = 0;
+    Camera1 = 1;
+}
+
+enum StreamAction {
+    OnlySetting = 0;
+    StartStream = 1;
+    StopStream  = 2;
+}
+
+enum IfThermalTest {
+    Disable = 0;
+    Enable  = 1;
+}
+
+message Metadata {
+    Resolution                  preview_resolution      = 1;
+    Fps                         preview_fps             = 2; //units: 0.1fps
+    Bitrate                     preview_bitrate         = 3; //units: kbit/s
+
+    Resolution                  video_resolution        = 4;
+    Fps                         video_fps               = 5; //units: 0.1fps
+    Bitrate                     video_bitrate           = 6; //uints: kbit/s
+    VideoFileFormat             video_file_format       = 7;
+    VideoStabilizationMode      stabilization_mode      = 8;
+
+    Resolution                  snapshot_resolution     = 9;
+    Resolution                  thumbnail_resolution    = 10;
+    SnapshotFileFormat          snapshot_file_format    = 11;
+    SnapshotQuality             snapshot_quality        = 12;
+    SnapshotMode                snapshot_mode           = 13;
+
+    Touch                       touch_mode              = 14;
+
+    Iso                         iso                     = 15;
+    ExposureTime                exposure_time           = 16;
+    HistogramMode               hist_mode               = 17;
+ 
+    ExposureMeterMode           exposure_meter_mode     = 18;
+    SceneMode                   scene_mode              = 19;
+    AutoExposureMode            auto_exposure_mode      = 20;
+    ExposureLockMode            auto_exposure_lock      = 21;
+    ExposureCompensation        exposure_compensation   = 22; // [-2,+2]
+
+    FlashMode                   flash_mode              = 23;
+
+    FocusMode                   focus_mode              = 24;
+    FocusLength                 focus_length            = 25;
+    FocusDistance               focus_distance          = 26;
+
+    WhiteBalanceMode            white_balance_mode      = 27;
+
+    DenoiseMode                 denoise_mode            = 28;
+
+    AntiBandingMode             anti_banding_mode       = 29;
+
+    Contrast                    contrast                = 30; // [0,100]
+    Sharpness                   sharpness               = 31;
+    Brightness                  brightness              = 32;
+    Saturation                  saturation              = 33;
+
+    FlipMode                    flip_mode               = 34;
+
+    ViewAngle                   view_angle              = 35;
+
+    // RTCP param
+    RtcpConfig                  rtcp                    = 36; // Take effect after startPreview().
+
+    Mode                        camera_mode             = 37;
+    common.TransMode            trans_mode              = 38; // wifi or fpv
+    // session data etc...
+
+    // vision param...
+    GpsInfo                     gps_info                = 42;
+
+    // add below value to manger streams
+    CameraId                    cam_id                  = 43;
+    StreamAction                stream_action           = 44;
+    IfThermalTest               thermal                 = 45;
+    Zoom                        zoom                    = 46;
+    MFNRConfig                  mfnr_mode               = 47;
+}
+
+enum ID {
+    FRONT   = 0;
+    OPTIC   = 1;
+    STEREO  = 2;
+}
+
+message SetMetadata{
+    ID        id          = 1;
+    Metadata  metadata    = 2;
+}
+
+/*****************************************
+*  camera event
+******************************************/
+enum StateEnum {
+    NOT_USED        = 0;
+    SELF_TESTING    = 1;
+    IDLE            = 2;
+    PREVIEWING      = 3;
+    VIDEO_RECORDING = 4;
+    SNAPSHOT_TAKING = 5;
+    FAULT           = 6;
+}
+
+message State {
+    StateEnum state = 1;
+}
+
+// Shutter triggered Event, used for vibration etc.
+message Shutter {
+    uint32 number = 1; // number for same snapshot.
+}
+
+message EventSnapshotDone {
+    string file_name    = 1;
+}
+
+message EventVideoDone {
+    string file_name    = 1;
+}
+
+message VideoRecording {
+    enum State {
+        IDLE            = 0;
+        RECORDING       = 1; // 录像中
+        RECORDING_DONE  = 2; // 录像完成
+        RECORDING_ABORT = 3; // 录像异常被中止，比如空间不足
+    }
+
+    State state         = 1; // 录像状态
+    uint32 time         = 2; // recording time (in seconds).
+}
+
+enum ObjectDetectingStateEnum {
+    LOST        = 0;
+    FOUND       = 1;
+    LOCKED      = 2;
+    ERROR       = 3;
+}
+
+message ObjectDetecting {
+    ObjectDetectingStateEnum state = 1;
+}
+
+enum GestureDetectingStateEnum {
+    GESTURE_OFF = 0;
+}
+
+message GestureDecting {
+    GestureDetectingStateEnum state = 1;
+}
+
+message SnapDelayTick {
+    uint32 tick = 1;
+}
+
+enum NotifyCallbackStateEnum {
+    COMPLETED                     = 0;
+    COMPLETED_PARTIAL             = 1; // continue-shot
+    ABORTED_FS_BAD                = 2; // abort while snapshot or recording
+    ABORTED_HARDWARE              = 3; // timeout
+    EVENT_EXTERNAL_DISK_USED      = 4;
+    EVENT_INTERNAL_DISK_USED      = 5;
+    EVENT_EXTERNAL_DISK_FULL      = 6;
+    EVENT_INTERNAL_DISK_FULL      = 7;
+}
+
+message NotifyCallback {
+    NotifyCallbackStateEnum state = 1;
+}
+
+message EventAEC {
+    uint64     exp_time   = 1;
+    uint32     exp_gain   = 2;
+    int32      ev         = 3;
+}
+
+message HistogramData {
+    repeated uint32 histdata        = 1; // size:256/4, unit:0.01
+}
+
+message Event {
+    State                   state                   = 1;
+    Shutter                 shutter                 = 2;
+    EventSnapshotDone       snapshot_done           = 3;
+    EventVideoDone          video_done              = 4;
+    VideoRecording          video_recording_state    = 5;
+    ObjectDetecting         object_detecting_state  = 6;
+    GestureDecting          gesture_detected        = 7;
+    SnapDelayTick           snap_delay_tick         = 8;
+    NotifyCallback          notify                  = 9;
+    EventAEC                aec_info                = 10;
+    HistogramData           hist_data               = 11;
+    Iso                     iso                     = 12;
+}
+
+enum ActionEnum {
+    INIT         = 0;
+    START_VIDEO  = 1;
+    FINISH_VIDEO = 2;
+    SNAP_DONE    = 3;
+}
+
+message Action {
+    ActionEnum action = 1;
+}
+
+message CSState {
+    NotifyCallbackStateEnum state = 1;
+    ActionEnum              action = 2;
+}
+
+message SessionId {
+    uint64  session_id = 1;
+}   

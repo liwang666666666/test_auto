@@ -1,0 +1,57 @@
+syntax = "proto2";
+
+package config;
+
+import "config_sensors.proto";
+
+// ------------------------------ ConfigCommand --------------------------------
+enum ConfigCommandType {
+  ConfigCommandNone                       = 0;
+  ConfigCommandGet                        = 1;
+  ConfigCommandUpdate                     = 2;
+  ConfigCommandMerge                      = 3;
+  ConfigCommandRestore                    = 4; // restore curretn configuration to default
+  ConfigCommandRestoreAll                 = 5; // restore curretn configuration to default
+}
+
+message ConfigUnit {
+  optional string name                    = 1; // the unit name
+  oneof content {
+    string yaml                           = 3; // the content of YAML file
+    Config proto                          = 4; // the prototxt
+  }
+}
+
+message ConfigCommand {
+  optional ConfigCommandType type         = 1;
+  repeated ConfigUnit config              = 2;
+}
+
+message ConfigCommandResponse {
+  optional bool ok                        = 1;
+  repeated ConfigUnit config              = 2;
+}
+
+
+// ------------------------------ for proto type --------------------------------
+enum ConfigUnitType {
+  ConfigUnitTypeRestore                   = 1; // restore the default configuration after upgrade
+  ConfigUnitTypeKeep                      = 2; // keep the current configuration after upgrade
+  ConfigUnitTypeFactory                   = 3; // only write operations are allowed in factory mode
+}
+
+message ConfigUnitInfo {
+  optional string name                    = 1; // the unit name
+  optional string version                 = 2; // the version of the unit
+  optional ConfigUnitType type            = 3; // the type of the unit
+  optional string desc                    = 4; // the description of the unit
+  optional bool file_monitor              = 5; // enable or disable the file monitor
+}
+
+message Config {
+  optional ConfigUnitInfo unit_info       = 1; // the unit information
+  oneof config {
+    CfgSensorsConfig sensors                 = 10;
+    // TODO: add other configs
+  }
+}

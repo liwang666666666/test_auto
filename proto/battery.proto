@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package battery;
+
+/***************************************
+* hover battery state id
+****************************************/
+enum BatteryStateId {
+    BATTERY_STATE_INIT                  = 0;
+    BATTERY_STATE_PUBLISHER             = 1;
+    BATTERY_STATE_OTA_UPGRADE           = 2;
+
+    // errors
+    BATTERY_STATE_UNKNOWN_ERR           = 99;
+}
+
+message BatteryProductInfo {
+    uint32 full_charge_soc              = 1;
+    uint32 design_soc                   = 2;
+    uint32 design_vol                   = 3;
+    uint32 application_ver              = 4;
+    uint32 lifetime                     = 5;
+}
+
+message BatteryRealtimeInfo {
+    int32 temperature                  = 1;
+    uint32 voltage                      = 2; // 电压
+    int32 current                       = 3; // 总电流
+    int32 average_cur                   = 4; // 前0.5s平均电流
+    uint32 average_vol                  = 5; // 前0.5s平均电压
+    uint32 relative_soc                 = 6; // 相对电量百分比(0~100)
+    uint32 remain_soc                   = 7; // 剩余容量
+    uint32 remain_time_s                = 8; // 剩余放电时间, 秒
+    repeated uint32 cell_vol            = 9; // 各电芯电压
+    int32 main_board_current            = 10;// 主板电流
+    bool is_charging                    = 11; //充电状态
+    bool is_flying                      = 12; //飞行状态
+}
+
+message BatteryHistoryInfo {
+    uint32 max_vol                      = 1; // 最大电压
+    uint32 min_vol                      = 2; // 最小电压
+    uint32 max_charge_c                 = 3; // 最大充电电流
+    uint32 max_discharge_c              = 4; // 最大放电电流
+    uint32 max_ave_discharge_c          = 5; // 最大平均放电电流
+    uint32 max_ave_discharge_p          = 6; // 最大平均放电功率
+    uint32 max_temp                     = 7; // 最大电芯温度
+    uint32 min_temp                     = 8; // 最小电芯温度
+    /*
+        Total FW Runtime
+        Time Spent in Ultra Temp
+        Time Spent in Lowest Temp (UT-10℃)
+        Time Spent in Lower Temp (10℃-20℃)
+        Time Spent in Normal Temp (20℃-25℃)
+        Time Spent in Higher Temp (25℃-30℃)
+        Time Spent in Highest Temp (30℃-OT)
+        Time Spent in Over Temp
+    */
+    repeated uint32 runtime_statistics      = 9;
+}
+
+// little endian
+enum BatteryAlarmBit {
+    BATTERY_ALARM_BIT_TEMP_HIGH             = 0;    // the low order bits starts at  0
+    BATTERY_ALARM_BIT_TEMP_LOW              = 1;
+    BATTERY_ALARM_BIT_POWER_LOW             = 2;
+}
+
+enum BatteryNotifyBit {
+    BATTERY_NOTIFY_BIT_CHARGE               = 0;    // 充电状态 the low order bits starts at  0
+    BATTERY_NOTIFY_BIT_DISCHARGE            = 1;    // 放电状态
+}
+
+message BatteryAlarmInfo {
+    uint32 alarm_bits                       = 1;    // bits index: BatteryAlarmBit
+    uint32 notify_bits                      = 2;    // bits index: BatteryNotifyBit
+}
+
+/***************************************
+* battery infomations
+* For publisher
+****************************************/
+message BatteryInfo {
+    BatteryStateId state                    = 1;
+    BatteryRealtimeInfo realtime_info       = 2;
+    BatteryAlarmInfo alarm_info             = 3;
+    BatteryProductInfo product_info         = 4;
+    BatteryHistoryInfo history_info         = 5;
+}
+
+/***************************************
+* battery command id
+****************************************/
+enum BatteryCommandId {
+    BATTERY_COMMAND_GET_INFO                = 0;
+    BATTERY_COMMAND_POWER_DISPLAY           = 1;
+}
+
+message BatteryCommand {
+    BatteryCommandId id                     = 1;
+    /*
+    oneof param {
+        bool isflying                       = 7;    // 1: flying, 0: not fly
+    }
+    */
+}
+
+message BatteryCommandAck {
+    int32 rc                                = 1;    // zero: Success, non zero: Fail
+    BatteryCommandId id                     = 2;
+    oneof param {
+        BatteryInfo info                    = 3;
+    }
+}
+

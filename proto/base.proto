@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package base;
+
+message Vec3f {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+message Vec3d {
+  double x = 1;
+  double y = 2; 
+  double z = 3; 
+}
+
+message Vec4f {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+  float w = 4;
+}
+
+message Rect {
+  float x      = 1;
+  float y      = 2;
+  float width  = 3;
+  float height = 4;
+}
+
+message GPS {
+  double latitude  = 1;
+  double longitude = 2;
+  double altitude  = 3;
+  double accuracy  = 4;
+}
+
+enum CoordinateSystem {
+  GROUND                    = 0;
+  BODY                      = 1;
+  RELATIVE                  = 2;
+}

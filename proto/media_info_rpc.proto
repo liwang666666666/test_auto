@@ -1,0 +1,29 @@
+syntax = "proto2";
+
+package h130;
+
+import "common_types.proto";
+import "media.proto";
+import "media_file_metadata_types.proto";
+
+message CommandAck {
+   required int32   rc = 1;
+}
+
+message InsertDataToDb {
+  optional MediaType type = 2;
+  optional int32 thumbnails_size = 3;
+  optional string thumbnails_path = 4;
+  optional int32 animated_size = 5;
+  optional string animated_path = 6;
+  optional string actual_media_path = 7;
+  optional VideoData video_data = 8;
+  optional ImageData photo_data = 9;
+  optional CameraSensorData sensor_data = 10;
+  optional uint64 create_time = 11;
+}
+
+service MediaRpc{
+    rpc StartInfoNotify      (MediaCountsMessage)        returns (CommandAck);
+    rpc CaptureMediaData      (InsertDataToDb)        returns (CommandAck);
+}

@@ -1,0 +1,62 @@
+syntax = "proto3";
+//Hover IDL definitions.
+//
+//About ConnectID
+//
+//- 多个设备同时通过 Wi-Fi 连接飞机需求
+//    - ⼩遥控器已经连接飞机，此时⽤⼿机连接飞机 Wi-Fi
+//        - ⼩遥控器可以继续使⽤
+//        - ⼿机可以连接飞机 Wi-Fi，可以在 App 相册下载飞机视频和照⽚
+//        - ⼿机可以连接飞机 Wi-Fi，但不能进⼊操控飞机和查看飞机画⾯
+//        - ⽤户尝试进⼊ App 预览流页⾯操控飞机时，⼿机预览流页⾯：另⼀个设备正在连接
+//    - ⼩遥控器已经连接飞机，此时⽤另⼀部⼩遥控器连接飞机 Wi-Fi
+//        - 另⼀部⼩遥控器可以连接飞机 Wi-Fi，但不能进⾏控制和预览
+//        - 另⼀部⼩遥控器显⽰屏上提⽰：另⼀个⼩遥控器正在连接
+//    - ⼿机已经连接飞机并且开始控制，⼩遥控尝试连接飞机 Wi-Fi
+//        - ⼿机 App 可以继续使⽤
+//        - ⼩遥控器可以连接飞机 Wi-Fi，但不能进⾏控制和预览
+//        - ⼩遥控器显⽰屏上提⽰：⼿机正在连接
+//- protocol fulfillment:
+//    - When client setup connection, it calling Connect(clientType).
+//        - If no other client is connected, it return a valid clientId.
+//        - If other clinet is connected, it return a null clientId(-1).
+//        - All following RPC call must providing valid ClientId, or server will reject it.
+//    - Hover(server side).
+//        - Grpc server maintain active ClientId. And refusing all RPCs with mismatched ClientId.
+
+package pb;
+
+option go_package = "drone_platform/interface_definition/proto/rpc";
+
+import "camera.proto";
+import "common_types.proto";
+
+/*****************************************
+*  rpcs
+******************************************/
+message ParamNone { }
+
+message CommandAck {
+    int32   rc = 1;
+}
+
+service Hover {
+    // StartSession:(should be called before other camera cmds)
+    // 1. fist time must set input sessionid = 0 to get an output sessionid from mediadb
+    // 2. In one session, if app/sRC/bRC reconnect, you should set input sessionid got from 1st step  
+    rpc StartSession            (camera.SessionId)                  returns (camera.SessionId);
+    rpc StopSession             (ParamNone)                         returns (CommandAck);
+    rpc SetCameraParam          (camera.SetMetadata)                returns (CommandAck);
+    rpc GetCameraParam          (ParamNone)                         returns (camera.Metadata);
+    rpc RegisterCameraEvent     (ParamNone)                         returns (stream camera.Event);
+    rpc ReadCameraEvent         (ParamNone)                         returns (camera.Event);
+    rpc StartPreview            (ParamNone)                         returns (CommandAck);
+    rpc StopPreview             (ParamNone)                         returns (CommandAck);
+    rpc StartVideo              (ParamNone)                         returns (CommandAck);
+    rpc StopVideo               (ParamNone)                         returns (CommandAck);
+    rpc TakeSnapshot            (ParamNone)                         returns (CommandAck);
+    rpc StopSnapshot            (ParamNone)                         returns (CommandAck);
+
+    // ManualControl
+    rpc RockerControl           (h130.RockerControlCommand)     returns (ParamNone);
+}

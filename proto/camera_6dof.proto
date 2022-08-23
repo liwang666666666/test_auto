@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+message Translation {
+    optional float x = 1;
+    optional float y = 2;
+    optional float z = 3;
+}
+
+message Quaternion {
+    optional float w = 1;
+    optional float x = 2;
+    optional float y = 3;
+    optional float z = 4;
+}
+
+message AttitudeFrame
+{
+    optional uint64 timestamp = 1;
+    optional Translation translation = 2;
+    optional Quaternion  quaternion  = 3;
+}
+
+message CameraData {
+    optional int32 width  = 1;
+    optional int32 height = 2;
+    optional double focal_length = 3;
+    optional float principal_point_x = 4;
+    optional float principal_point_y = 5;
+}
+
+message SixDof {
+    repeated AttitudeFrame attitude_data = 1;
+    optional CameraData    camera_data    = 2;
+    optional float         video_fps     = 3;
+}

@@ -1,0 +1,32 @@
+syntax = "proto3";
+//camera service IDL definitions
+
+package pbCamera;
+
+import "camera.proto";
+
+message ParamNone {}
+
+enum CmdErr {
+    CAM_ERR_NONE = 0;
+    CAM_ERR_PARM = 0x100;
+}
+
+message CommandAck {
+    CmdErr ret = 1;
+}
+
+
+service CameraServer {
+    rpc Init                      (ParamNone)                      returns (CommandAck) {}
+    rpc SetCameraParam            (camera.SetMetadata)             returns (CommandAck) {}
+    rpc GetCameraParam            (ParamNone)                      returns (camera.Metadata) {}
+    rpc StartPreview              (ParamNone)                      returns (CommandAck) {}
+    rpc StopPreview               (ParamNone)                      returns (CommandAck) {}
+    rpc StartVideo                (ParamNone)                      returns (CommandAck) {}
+    rpc StopVideo                 (ParamNone)                      returns (CommandAck) {}
+    rpc TakeSnapshot              (ParamNone)                      returns (CommandAck) {}
+    rpc StopSnapshot              (ParamNone)                      returns (CommandAck) {}
+    rpc CameraStatus              (ParamNone)                      returns (stream camera.Event) {}
+}
+

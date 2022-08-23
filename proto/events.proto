@@ -1,0 +1,42 @@
+syntax = "proto2";
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "rpc_message_types.proto";
+import "camera.proto";
+import "common_types.proto";
+
+message EventPb {
+  oneof event {
+    // Emitted when the charger is connected or disconnected
+    ChargerStateResponse charger_event = 1;
+    // Emitted periodically during Cheerios OTA to report status
+    OTAUpdateEventData ota_update_event = 2;
+    // Emitted when a flight mode is changed
+    FlightModeConfig flight_mode_change_event = 3;
+    // Emitted when flight status gets changed
+    CaptainInfo flight_status_change_event = 4;
+    // Emitted when flight error happens
+    FlightStatusError flight_status_error_event = 5;
+    // Emitted when estimated flight time changes
+    RemainingFlightInfo remaining_flight_info_changed_event = 6;
+    // Emitted when Cheerios connects/disconnects via USB
+    USBConnectionStatus usb_connection_event = 7;
+    // Emitted when battery level changes significantly.
+    BatteryStatusResponse battery_status_event = 8;
+    // Emitted status changes during IMU calibration.
+    CalibrationStatus calibration_status_event = 9;
+    // Emitted lost mode state changes.
+    LostModeEvent lost_mode_event = 10;
+    // Camera Event
+    camera.Event camera_event = 11;
+    // Camera Count Down Event
+    CameraCountDownEvent camera_count_down_event = 12;
+    // System Event
+    SysEvent sys_event = 13;
+  }
+}

@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package bt_service;
+
+
+message BTServiceRequest {
+
+    oneof request{
+        // Set device name
+        string set_name_request = 2;
+
+        // Get device name
+        bool get_name_request = 3;
+
+        // Get BLE connection status
+        bool get_connection_status_request = 4;
+    }
+}
+
+message BTServiceResponse {
+    bool success = 2;
+
+    oneof response{
+
+        // Get device name
+        string get_name_response = 3;
+
+        // Get BLE connection status
+        bool  get_connection_status_response = 4;
+    }
+}

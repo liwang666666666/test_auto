@@ -1,0 +1,876 @@
+syntax = "proto2";
+
+/*
+Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.2] - 2022-08-12
+### Added
+- Add group_id to MediaFileMetadata 
+
+## [0.1.1] - 2022-08-11
+### Added
+- Add restore_factory_settings_request/response
+- Add GET_MEDIA_FILES_BY_SESSION_ID, GET_NEW_MEDIA_FILES to MediaRequestType in media.proto
+- Add the udp interface description
+
+## [0.1.0] - 2022-08-10
+### Deleted
+- Delete camera_stop_photo_request
+### Changed
+- Change some request interface parameters to FlightModeConfig
+
+## [0.0.8] - 2022-08-09
+### Added
+- Add set/get_enable_system_sound_request/response
+- Add recording state to VideoRecording
+- Add SystemEvent to EventPb
+### Changed
+- Change message Iso in camera.proto
+
+## [0.0.7] - 2022-08-06
+### Added
+- Add CameraCountDownEvent to EventPb
+- Add MediaHeartBeatState to HeartBeatInfo
+### Changed
+- Change dial_position_change_event to flight_mode_change_event in EventPb
+- Remove DialPosition definition, flight mode is used instead of dial position
+- Change the project identifier to H130
+
+## [0.0.6] - 2022-08-04
+### Added
+- Add flight_mode to CameraFramerateParams
+- Add CameraFramerateParams to CameraPhotoParamsSettings
+### Changed
+- Change set_video/photo_hdr/raw/mfnr_request/response parameters
+
+## [0.0.5] - 2022-08-02
+### Added
+- Add set_dial_position_to_manual request/response
+- Add camera event to EventPb
+- Add get_all_camera_settings_request/response
+- Add CameraCountDownEvent to EventPb
+### Changed
+- Modify camera_take_snapshot_request/response/camera_stop_snapshot_request/response
+    to camera_take_photo_request/response/camera_stop_photo_request/response
+
+## [0.0.4] - 2022-08-01
+### Added
+- Add some params to FlightModeSettings
+- Add state to VideoRecording
+
+## [0.0.3] - 2022-07-28
+### Added
+- Add set/get_main_camera_framerate request/response
+- Add set/get_flight_angle request/response
+- Add set/get_flight_height request/response
+- Add FlightModeConfig to HeartBeatInfo
+- Add 60FPS enum to VideoResolutionParams
+
+## [0.0.2] - 2022-07-27
+### Added
+- Add MANUAL, OVERHEAD to FlightModeType.
+- Add some requests for settings.
+- Add camera state to HeartBeatInfo.
+
+## [0.0.1] - 2022-07-26
+### Added
+- Based on the Cheerios project.
+- Added the documentation for each interface.
+*/
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "common_types.proto";
+import "rpc_message_types.proto";
+import "media.proto";
+import "google/protobuf/descriptor.proto";
+import "camera.proto";
+
+
+// APP <-> Drone udp port interface definition
+// - RTP：7078
+// - PushMessage：19099
+// - RockerControlCommand: 19091
+
+// Each RPC request is tagged with a security level indicating which
+// clients can call that RPC. The client calling RPCs have a security level.
+// The client can call any RPC at its own security level or lower.
+enum SecurityLevel {
+  // Can be called from unauthenticated external clients
+  UNAUTH_CLIENT = 10;
+  // Can be called from authenticated/encrypted external clients
+  AUTH_CLIENT = 20;
+  // Can be called from apps running on the device
+  APP = 30;
+  // Can be called from trusted first party apps
+  INTERNAL_APP = 40;
+  // Can be called from trusted code in the FW
+  INTERNAL_FW = 50;
+  // Can be called by debug clients (e.g. UART)
+  DEBUG = 60;
+}
+
+extend google.protobuf.FieldOptions {
+  optional SecurityLevel security_level = 50001 [ default = INTERNAL_APP ];
+}
+
+message RpcRequest {
+  // optional ID, can be used by clients to correlate request/responses
+  optional uint32 id = 6;
+  oneof request {
+    // ############################# 测试相关 ########################
+    // for debugging purpose
+    string echo_request = 1;
+
+    // for debugging purpose
+    string test_request = 2;
+
+    // ############################# 系统相关 ########################
+    // set serial number request
+    string set_serial_number_request = 20;
+
+    // get serial number request
+    Empty get_serial_number_request = 21;
+
+    // Returns code verison info
+    Empty git_request = 22;
+
+    // Set device name
+    BleName set_name_request = 23;
+
+    // Get device name
+    Empty get_name_request = 24;
+
+    // Wifi start request
+    WifiParams wifi_start_request = 25;
+
+    // Wifi stop request
+    Empty wifi_stop_request = 26;
+    
+    // Battery status request
+    Empty battery_status_request = 27;
+    
+    // Charger state request
+    // 充电状态请求
+    Empty charger_state_request = 28;
+
+    // Logs zip request
+    // 日志zip包请求，暂不实现
+    Empty logs_zip_request = 29;
+    
+    // Request board ID， 暂不实现
+    Empty board_id_request = 30;
+
+    // Send Location object 
+    // Location信息相关请求
+    LocationData location_request = 31;
+
+    // get temperature request
+    // 飞机温度状态请求
+    Empty get_temperature_request = 32;
+
+    // Get the status of USB import, on or off.
+    // 获取usb导出功能开启状态
+    Empty get_enable_usb_import_request = 33;
+
+    // Set enable or disable USB import request
+    // 开启或关闭usb导出功能
+    bool set_enable_usb_import_request = 34;
+
+    // Clear storage
+    // 清空飞机存储
+    Empty clear_content_request = 35;
+
+    // Restart request
+    // 重启飞机
+    Empty halt_request = 36;
+
+    // Set time request
+    // 同步UTC时间到飞机
+    RealTimeMessage set_time_utc_request = 37;
+
+    // flight mode request
+    // 获取当前飞行模式
+    Empty get_flight_mode_request = 38;
+
+    // flight status request
+    // 获取飞机飞行状态
+    Empty get_flight_status_request = 39;
+
+    // abort flight request
+    // 中止飞行任务并返航
+    Empty abort_flight_request = 40;
+
+    // storage capacity request
+    // 获取存储容量信息
+    Empty get_storage_capacity_request = 41;
+
+    // disable flight request
+    // 禁止飞行
+    DisableFlightRequest disable_flight_request = 42;
+
+    // Get USB connection status
+    // 获取usb连接状态
+    Empty get_usb_connection_request = 43;
+
+    // Check if ADB is enabled
+    // 获取adb使能状态
+    Empty get_enable_adb_request = 44;
+
+    // Enable or disable ADB 
+    // 开启或关闭adb功能
+    bool set_enable_adb_request = 45;
+
+    // Set the dial position to MANUAL or not
+    // 设置档位（飞行模式）为手动或者智能轨迹
+    bool set_flight_mode_to_manual_request = 46;
+
+    // Enable or disable the system sound
+    // 开启或关闭系统声音
+    bool set_enable_system_sound_request = 47;
+
+    // Get the system sound state
+    // 获取系统声音开关
+    Empty get_enable_system_sound_request = 48;
+
+    // Restore factory settings
+    Empty restore_factory_settings_request = 49;
+
+
+    // ############################# 连接相关 ########################
+    // For 3PA symmetric encryption, exchange public key request. This is sent from client to device.
+    // 设置公钥请求， 暂不实现
+    KeyExchangeMessage set_pairing_public_key_request = 60 [(security_level) = UNAUTH_CLIENT];
+
+    // For 3PA symmetric encryption, peer verification request. This is sent from client to device.
+    // 对等加密校验请求，暂不实现
+    PeerVerificationMessage set_peer_verification_request = 61 [(security_level) = UNAUTH_CLIENT];
+
+    // Exchange nonces between client and device (BLE)
+    // in order to establish a secure channel for encrypted communication
+    // 交换通道加密nonce请求，暂不实现
+    EncryptionNonceExchange set_channel_encryption_nonce_request = 62 [(security_level) = UNAUTH_CLIENT];
+
+    // Unpair/forget device
+    // 取消配对
+    Empty unpair_device_request = 63;
+
+    // Pairing timer kick request
+    // 等待用户配对中，暂不实现
+    Empty pairing_wait_for_user_request = 64;
+
+    // Verifies user is allowed to pair.
+    // 配对验证请求，暂不实现
+    ValidatePairingRequest validate_pairing_request = 65;
+
+    // Keep device active
+    // 保持设备活跃，暂不实现
+    KeepDeviceActiveParams keep_device_active_request = 66;
+
+    // Activate lost mode
+    // 激活失联模式，暂不实现
+    ActivateLostModeRequest activate_lost_mode_request = 67;
+
+    // Deactivate lost mode
+    // 解除失联模式，暂不实现
+    DeactivateLostModeRequest deactivate_lost_mode_request = 68;
+
+    // Get lost mode state
+    // 获取失联模式状态，暂不实现
+    GetLostModeStateRequest get_lost_mode_state_request = 69;
+
+    // Request heartbeat info
+    // 心跳信息请求. App周期主动请求飞机心跳信息，用于判断飞机与App连接状态
+    Empty heartbeat_info_request = 70;
+
+
+    // ############################# 媒体相关 ########################
+    // Direct query for media count
+    // 获取媒体文件数量
+    Empty media_counts_get_request = 90;
+
+    // Media request
+    // media命令请求
+    MediaRequest media_request = 91;
+
+
+    // ############################# 升级相关 ########################
+    // ota update request 
+    // OTA更新请求
+    OTAUpdateRequest ota_update_request = 110;
+
+    // firmware update upload request
+    // OTA固件上传
+    FirmwareUpdateUploadRequest firmware_update_upload_request = 111;
+
+    // set OTA scheduled update request
+    // 设置计划升级
+    OTAScheduledUpdate set_scheduled_update_request = 112;
+    
+    // get OTA scheduled update request
+    // 获取计划升级信息
+    Empty get_scheduled_update_request = 113;
+
+    // Cancel scheduled update request
+    // 取消计划升级
+    Empty cancel_scheduled_update_request = 114;
+    
+
+    // ############################# 飞行配置相关 ########################
+    // Set capture duration
+    // 设置指定轨迹模式下的采集间隔时间
+    DurationParams set_capture_duration_request = 130;
+
+    // Get capture duration
+    // 获取指定轨迹模式下的采集间隔时间
+    FlightModeConfig get_capture_duration_request = 131;
+
+    // Set video resolution
+    // 设置指定轨迹模式下的视频分辨率
+    VideoResolutionParams set_video_resolution_request = 132;
+
+    // Get video resolution
+    // 获取指定轨迹模式下的视频分辨率
+    FlightModeConfig get_video_resolution_request = 133;
+
+    // Set flight distance
+    // 设置指定轨迹模式下的飞行距离
+    DistanceParams set_flight_distance_request = 134;
+
+    // Get flight distance
+    // 获取指定轨迹模式下的飞行距离
+    FlightModeConfig get_flight_distance_request = 135;
+
+    // Set capture type
+    // 设置指定轨迹模式下的采集类型
+    CaptureTypeParams set_capture_type_request = 136;
+
+    // Get capture type
+    // 获取指定轨迹模式下的采集类型
+    FlightModeConfig get_capture_type_request = 137;
+
+    // Set face/body tracking
+    // 开启或关闭指定轨迹模式下的tracking
+    TrackingParams set_tracking_request = 138;
+
+    // Get face/body tracking
+    // 获取指定轨迹模式下的tracking状态
+    FlightModeConfig get_tracking_request = 139;
+
+    // Get remaining flights info request
+    // 获取指定轨迹模式下的剩余飞行信息
+    Empty get_remaining_flights_info_request = 140;
+
+    // Set video format
+    // 设置指定轨迹模式下的视频格式
+    VideoFormatParams set_video_format_request = 141;
+
+    // Get video format
+    // 获取指定轨迹模式下的视频格式
+    FlightModeConfig get_video_format_request = 142;
+
+    // Set custom flight mode
+    // 设置custom档位的轨迹模式
+    CustomFlightMode set_custom_flight_mode_request = 143;
+
+    // Get custom flight mode
+    // 获取custom档位的轨迹模式
+    Empty get_custom_flight_mode_request = 144;
+
+    // Set photo resolution
+    // 设置指定轨迹模式下的拍照分辨率
+    PhotoResolutionParams set_photo_resolution_request = 145;
+
+    // Get photo resolution
+    // 获取指定轨迹模式下的拍照分辨率
+    FlightModeConfig get_photo_resolution_request = 146;
+
+    // Request for getting settings for all flight modes
+    // 获取所有轨迹模式的飞行配置参数
+    Empty get_all_flight_modes_settings_request = 147;
+
+    // Set Preview resolution
+    // 设置指定轨迹模式下的预览流分辨率
+    PreviewResolutionParams set_preview_resolution_request = 148;
+
+    // Get Preview resolution
+    // 获取指定轨迹模式下的预览流分辨率
+    FlightModeConfig get_preview_resolution_request = 149;
+
+    // Set Video HDR
+    // 开启或关闭指定轨迹模式下的HDR功能
+    HDRParams set_video_hdr_request = 150;
+
+    // Get Video HDR
+    // 获取指定轨迹模式下的HDR功能开启状态
+    FlightModeConfig get_video_hdr_request = 151;
+
+    // Set Photo HDR
+    // 开启或关闭指定轨迹模式下的HDR功能
+    HDRParams set_photo_hdr_request = 152;
+
+    // Get Photo HDR
+    // 获取指定轨迹模式下的HDR功能开启状态
+    FlightModeConfig get_photo_hdr_request = 153;
+
+    // Set Photo raw
+    // 开启或关闭指定轨迹模式下的raw功能
+    RAWParams set_photo_raw_request = 154;
+
+    // Get Photo raw
+    // 获取指定轨迹模式下的raw功能开启状态
+    FlightModeConfig get_photo_raw_request = 155;
+
+    // Set Photo MFNR
+    // 开启或关闭指定轨迹模式下的MFNR功能
+    MFNRParams set_photo_mfnr_request = 156;
+
+    // Get Photo MFNR
+    // 获取指定轨迹模式下的MFNR功能开启状态
+    FlightModeConfig get_photo_mfnr_request = 157;
+
+    // Set Trajectory Type
+    // 设置指定轨迹模式下的轨迹类型
+    TrajectoryTypeParams set_trajectory_type_request = 158;
+
+    // Get Trajectory Type
+    // 获取指定轨迹模式下的轨迹类型
+    FlightModeConfig get_trajectory_type_request = 159;
+
+    // Set main camera sensor collect framerate 
+    // 设置主camera采集帧率
+    CameraFramerateParams set_main_camera_framerate_request = 160;
+
+    // Get main camera sensor collect framerate 
+    // 获取主camera采集帧率
+    FlightModeConfig get_main_camera_framerate_request = 161;
+
+    // Set height params request
+    // 设置指定轨迹模式下的高度参数
+    HeightParams set_flight_height_request = 162;
+
+    // Get height params request
+    // 获取指定轨迹模式下的高度参数
+    FlightModeConfig get_flight_height_request = 163;
+
+    // Set flight angle params request
+    // 设置指定轨迹模式下的飞行角度参数
+    AngleParams set_flight_angle_request = 164;
+
+    // Get flight angle params request
+    // 获取指定轨迹模式下的飞行角度参数
+    FlightModeConfig get_flight_angle_request = 165;
+
+    // Request for getting settings for all camera parameters
+    // 获取所有轨迹模式的Camera配置参数
+    Empty get_all_camera_settings_request = 166;
+
+
+    // ############################# 状态相关 ########################
+    // Get flight status error request
+    // 获取飞行errorcode列表
+    Empty get_flight_status_error_request = 180;
+
+
+    // ############################# 日志相关 ########################
+    // Get log file
+    // 日志请求，暂不实现
+    LogRequest log_request = 200;
+
+
+    // ############################# 校准相关 ########################
+    // Start IMU calibration
+    // 开始IMU校准
+    StartCalibrationRequest start_imu_calibration_request = 220;
+
+    // Stop IMU calibration
+    // 停止IMU校准
+    StopCalibrationRequest stop_imu_calibration_request = 221;
+
+
+    // ############################# camera相关 ########################
+    // StartSession:(should be called before other camera cmds)
+    // 1. fist time must set input sessionid = 0 to get an output sessionid from mediadb
+    // 2. In one session, if app/sRC/bRC reconnect, you should set input sessionid got from 1st step  
+    // camera请求新session id, 用于媒体文件分组, 暂不实现
+    camera.SessionId camera_start_session_request = 240;
+
+    // Called after stopping the preview
+    // 关闭预览流时调用, 暂不实现
+    Empty camera_stop_session_request = 241;
+
+    // Start/Stop the camera preview
+    // 开启或关闭预览流
+    bool camera_start_preview_request = 242;
+
+    // Start/Stop video 
+    // 开启/关闭录像
+    bool camera_start_video_request = 243;
+
+    // Start take a photo
+    // 开始拍照或连拍. 当手动模式下CaptureType为连拍模式，则此命令表示开始一组连拍
+    Empty camera_take_photo_request = 244;
+
+    // 设置UDP服务端IP, 用于预览流和event主动上报App
+    string set_udp_server_ipaddress_request = 245;
+
+
+    // ############################# 其他 ########################
+    // StartSession:(should be called before other camera cmds)
+    // Generic asset file request
+    // 暂不实现
+    GetFileRequest get_generic_asset_file_request = 280;
+  }
+}
+
+message RpcResponse {
+  // Error codes
+  enum Error {
+    // invalid request
+    INVALID_REQUEST = 1;
+    // no handler
+    NO_HANDLER = 2;
+    // hardware error
+    HW_ERROR = 3;
+    // io error
+    IO_ERROR = 4;
+    // internal error
+    INTERNAL_ERROR = 5;
+    // qualcomm is down
+    QCOM_IS_DOWN = 6;
+    // request is cancelled
+    REQUEST_CANCELED = 7;
+  }
+  // can be used by clients to correlate request/response
+  optional uint32 id = 7;
+  oneof response {
+    // Deprecated. error on processing a request
+    Error error = 1;
+
+    // ############################# 测试相关 ########################
+    // for debugging purpose
+    string echo_response = 10;
+
+    // for debugging purpose
+    string test_response = 11;
+
+    // ############################# 系统相关 ########################
+    // set serial number response
+    Empty set_serial_number_response = 30;
+
+    // get serial number response
+    string get_serial_number_response = 31;
+
+    // code verison info
+    GitResponse git_response = 32;
+
+    // Response for getting BLE name
+    BleName get_name_response = 33;
+
+    // Response for setting BLE name
+    Empty set_name_response = 34;
+
+    // Wifi start response
+    Empty wifi_start_response = 35;
+    
+    // Wifi stop response
+    Empty wifi_stop_response = 36; 
+
+    // Battery status response
+    BatteryStatusResponse battery_status_response = 37;
+ 
+    // Charger state response
+    ChargerStateResponse charger_state_response = 38;
+
+    // Logs response
+    LogsResponse logs_zip_response = 39;
+      
+    // board ID response
+    BoardIdResponse board_id_response = 40;
+
+    // send location response
+    Empty location_response = 41;
+
+    // get temperature response
+    TemperatureResponse get_temperature_response = 42;
+
+    // Get enable USB import response, on or off.
+    bool get_enable_usb_import_response = 43;
+
+    // Set enable USB import response
+    Empty set_enable_usb_import_response = 44;
+
+    // Clear device storage
+    Empty clear_content_response = 45;
+
+    // Restart device response
+    Empty halt_response = 46;
+
+    // Set time response
+    Empty set_time_utc_response = 47;
+
+    // flight mode response
+    FlightModeConfig get_flight_mode_response = 48;
+
+    // flight status response
+    CaptainInfo get_flight_status_response = 49;
+
+    // abort flight response
+    bool abort_flight_response = 50;
+
+    // storage capacity response
+    StorageCapacity get_storage_capacity_response = 51;
+
+    // disable flight response
+    DisableFlightResponse disable_flight_response = 52;
+
+    // Response for USB connection status
+    USBConnectionStatus get_usb_connection_response = 53;
+
+    // Get enable ADB response, true = ADB enabled
+    bool get_enable_adb_response = 54;
+    
+    // Set enable ADB response
+    Empty set_enable_adb_response = 55;
+
+    // Set flight mode to MANUAL or not
+    Empty set_flight_mode_to_manual_response = 56;
+    
+    // Set enable system sound response
+    Empty set_enable_system_sound_response = 57;
+
+    // Get enable system sound response, true = system sound enabled
+    bool get_enable_system_sound_response = 58;
+
+    // Restore factory settings
+    Empty restore_factory_settings_response = 59;
+
+
+    // ############################# 连接相关 ########################
+    // For 3PA symmetric encryption, exchange public key response. This is sent from device to client.
+    KeyExchangeMessage set_pairing_public_key_response = 70 [(security_level) = UNAUTH_CLIENT];
+
+    // For 3PA symmetric encryption, peer verification response. This is sent from device to client.
+    PairingSignatureMessage set_peer_verification_response = 71 [(security_level) = UNAUTH_CLIENT];
+
+    // Confirm receipt of security nonce and respond with the rx nonce
+    EncryptionNonceExchange set_channel_encryption_nonce_response = 72 [(security_level) = UNAUTH_CLIENT];
+
+    // Unpair/forget device response
+    Empty unpair_device_response = 73;
+
+    // Pairing timer kick response
+    Empty pairing_wait_for_user_response = 74;
+
+    // Verifies user is allowed to pair.
+    ValidatePairingResponse validate_pairing_response = 75;
+
+    // Keep device active response
+    KeepDeviceActiveResult keep_device_active_response = 76;
+
+    // Activate lost mode response
+    ActivateLostModeResponse activate_lost_mode_response = 77;
+
+    // Deactivate lost mode response
+    DeactivateLostModeResponse deactivate_lost_mode_response = 78;
+
+    // Get lost mode state response
+    GetLostModeStateResponse get_lost_mode_state_response = 79;
+
+    // Request heartbeat info
+    HeartBeatInfo heartbeat_info_response = 80;
+
+
+    // ############################# 媒体相关 ########################
+    // Media count response
+    MediaCountsResponse media_counts_get_response = 100;
+
+    // Return media response
+    MediaResponse media_response = 101;
+
+    
+    // ############################# 升级相关 ########################
+    // ota update response
+    OTAUpdateResponse ota_update_response = 120;
+
+    // firmware update upload response
+    FirmwareUpdateUploadResponse firmware_update_upload_response = 121;
+
+   // set OTA scheduled update response
+    bool set_scheduled_update_response = 122;
+    
+    // get OTA scheduled update response
+    OTAScheduledUpdate get_scheduled_update_response = 123;
+
+    // Cancel scheduled update response
+    OTACancelScheduledUpdateResponse cancel_scheduled_update_response = 124;
+    
+
+    // ############################# 飞行配置相关 ########################
+    // Response for set capture duration
+    Empty set_capture_duration_response = 140;
+
+    // Response for get capture duration
+    DurationParams get_capture_duration_response = 141;
+
+    // Response for set video resolution
+    Empty set_video_resolution_response = 142;
+
+    // Response for get video resolution
+    VideoResolutionParams get_video_resolution_response = 143;
+
+    // Response for set flight distance
+    Empty set_flight_distance_response = 144;
+
+    // Response for get flight distance
+    DistanceParams get_flight_distance_response = 145;
+
+    // Response for set capture type
+    Empty set_capture_type_response = 146;
+
+    // Response for get capture type response
+    CaptureTypeParams get_capture_type_response = 147;
+
+    // Response for set face/body tracking
+    Empty set_tracking_response = 148;
+
+    // Response for get face/body tracking
+    TrackingParams get_tracking_response = 149;
+
+    // Response for get remaining flights
+    RemainingFlightInfo get_remaining_flights_info_response = 150;
+
+    // Response for set video format
+    Empty set_video_format_response = 151;
+
+    // Response for get video format
+    VideoFormatParams get_video_format_response = 152;
+
+    // Response for get flight status error
+    FlightStatusError get_flight_status_error_response = 153;
+
+    // Response for set custom flight mode
+    Empty set_custom_flight_mode_response = 154;
+
+    // Response for get custom flight mode
+    FlightModeConfig get_custom_flight_mode_response = 155;
+
+    // Response for set photo resolution
+    Empty set_photo_resolution_response = 156;
+
+    // Response for get photo resolution
+    PhotoResolutionParams get_photo_resolution_response = 157;
+
+    // Response for getting settings for all flight modes
+    FlightSettings get_all_flight_modes_settings_response = 158;
+
+    // Response for set preview resolution
+    Empty set_preview_resolution_response = 159;
+
+    // Response for get preview resolution
+    PreviewResolutionParams get_preview_resolution_response = 160;
+
+    // Response for set video hdr
+    Empty set_video_hdr_response = 161;
+
+    // Response for get video hdr
+    HDRParams get_video_hdr_response = 162;
+
+    // Response for set photo hdr
+    Empty set_photo_hdr_response = 163;
+
+    // Response for get photo hdr
+    HDRParams get_photo_hdr_response = 164;
+
+    // Response for set photo raw
+    Empty set_photo_raw_response = 165;
+
+    // Response for get photo raw
+    RAWParams get_photo_raw_response = 166;
+
+    // Response for set photo mfnr
+    Empty set_photo_mfnr_response = 167;
+
+    // Response for get photo mfnr
+    MFNRParams get_photo_mfnr_response = 168;
+
+    // Response for set trajectory type
+    Empty set_trajectory_type_response = 169;
+
+    // Response for get trajectory type
+    TrajectoryTypeParams get_trajectory_type_response = 170;
+
+    // Response for set camera framerate
+    Empty set_main_camera_framerate_response = 171;
+
+    // Response for get photo mfnr
+    CameraFramerateParams get_main_camera_framerate_response = 172;
+
+    // Response for set flight height
+    Empty set_flight_height_response = 173;
+
+    // Response for get flight height
+    HeightParams get_flight_height_response = 174;
+
+    // Response for set flight angle
+    Empty set_flight_angle_response = 175;
+
+    // Response for get flight angle
+    AngleParams get_flight_angle_response = 176;
+
+    // Response for getting settings for all camera parameters
+    CameraSettings get_all_camera_settings_response = 177;
+
+
+    // ############################# 状态相关 ########################
+    // Error on processing a request
+    ErrorResponse error_response = 190;
+
+
+    // ############################# 日志相关 ########################
+    // Response for log file request
+    LogResponse log_response = 210;
+
+
+    // ############################# 校准相关 ########################
+    // Start IMU calibration response
+    StartCalibrationResponse start_imu_calibration_response = 230;
+
+    // Stop IMU calibration response
+    StopCalibrationResponse stop_imu_calibration_response = 231;
+
+
+    // ############################# camera相关 ########################
+    // Called before the other camera commands
+    camera.SessionId camera_start_session_response = 250;
+
+    // Called after stopping the preview
+    Empty camera_stop_session_response = 251;
+
+    // Start/Stop the camera preview
+    bool camera_start_preview_response = 252;
+
+    // Start/Stop video 
+    bool camera_start_video_response = 253;
+
+    // Start take photo
+    bool camera_take_photo_response = 254;
+
+    // Stop take photo
+    bool camera_stop_photo_response = 255;
+
+    Empty set_udp_server_ipaddress_response = 256;
+
+    // ############################# 其他 ########################
+    // get generic asset file response
+    GetFileResponse get_generic_asset_file_response = 280;
+  }
+}

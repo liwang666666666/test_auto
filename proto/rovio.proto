@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package rovioData;
+
+import "base.proto";
+
+// Detecting 结果，每个目标由 index 的 rect 组成
+message Rovio {
+  double timestamp = 1;
+  base.Vec3f position   = 2;
+  base.Vec4f quaternion = 3;
+}

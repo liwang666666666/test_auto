@@ -1,0 +1,29 @@
+syntax = "proto2";
+
+package config;
+
+message CfgVector { repeated float values = 1; }
+
+message CfgMatrix { repeated CfgVector rows = 1; }
+
+message CfgLinearAdjust {
+  optional CfgVector scale                    = 1;
+  optional CfgVector bias                     = 2;
+}
+
+message CfgIMUConfig {
+  optional CfgLinearAdjust accel              = 1;
+  optional CfgLinearAdjust gyro               = 2;
+  optional CfgMatrix R                        = 3;
+  optional CfgVector rotation                 = 4;
+}
+
+message CfgOptflowConfig {
+  optional CfgMatrix R                        = 1;
+}
+
+message CfgSensorsConfig {
+  repeated CfgIMUConfig imu     	            = 1;
+  repeated CfgOptflowConfig optflow 	        = 2;
+  // TODO: add something
+}

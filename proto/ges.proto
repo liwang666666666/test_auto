@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+// GeoSpatial Environment Safety System
+package ges;
+
+import "base.proto";
+
+message LimitState {
+  LimitDistanceState limit_distance = 1; // 限远状态
+  LimitHeightState limit_height     = 2; // 限高状态
+  LimitZoneState limit_zone         = 3; // 限制区状态
+
+  enum LimitDistanceState {
+    LimitDistanceNone             = 0;
+    ReachLimitDistance            = 1; //已达最大限制距离
+  }
+
+  enum LimitHeightState {
+    LimitHeightNone               = 0;
+    ReachLimitHeight              = 1; //已达最大限制高度
+    ReachLimitHeightNoGPS         = 2; //无GPS时，已达最大限制高度
+  }
+
+  enum LimitZoneState {
+    LimitZoneNone                 = 0;
+    InLimitFlyZone                = 1; //禁飞区内, 禁止起飞或强制降落中
+    TouchedLimitFlyZone	          = 2; //飞机在禁飞区外, 飞机已触碰到禁飞区
+    ApproachLimitFlyZone          = 3; //飞机在禁飞区外, 即将触碰到禁飞区
+    HasLimitFlyZoneNearby         = 4; //附近有禁飞区
+    NoGPSInDroneAndControllerInNoFlyZone = 5; //移动设备（手机）在禁飞区中，且飞机无 GPS
+    InLimitHeight                 = 6; //在限高区内，但未达到限制高度
+    ApproachLimitHeight           = 7; //在限高区内，达到限制高度
+    ExceedLimitHeight             = 8; //在限高区内，超过限制高度
+    TouchedLimitHeightZone        = 9; //飞机在限高区外，触碰到限高区
+    ApproachLimitHeightZone       = 10; //飞机在限高区外，在限高区边缘（即将触碰到限高区）
+    HasLimitHeightZoneNearby      = 11; //附近有限高区
+  }
+}
+
+message GESState {
+  StateType ges_state             = 1; // GES工作状态
+  ZoneType zone_type              = 2; // 当前所处区域类型
+  LimitState limit_state          = 3; // 限制状态
+  uint64 zone_id                  = 4; // 唯一的限制区id,　zone_type值非ZoneTypeNone时，有效
+
+  enum StateType {
+    StateStop                     = 0; // 未工作
+    StateNormal                   = 1; // 正常状态
+    StateInitiating               = 2; // 初始化状态
+    StateInitFailed               = 3; // 初始化失败
+    StateNoGPS                    = 4; // 飞机和Client无GPS
+    StateClientGPSOnly            = 5; // 仅Client有GPS
+  }
+
+  enum ZoneType {
+    ZoneTypeNone                  = 0; // 自由区
+    ZoneTypeFree                  = 1; // 自由区
+    ZoneTypeNoFly                 = 2; // 禁飞区
+    ZoneTypeWarning               = 3; // 警告区, 不需要申请，可直接跳过警告
+    ZoneTypeEnhanceWarning        = 4; // 增强警告区, 可以申请，不需要帐号验证
+    ZoneTypeAuth                  = 5; // 授权区，可以申请授权, 需要帐号验证
+    ZoneTypeHeight                = 6; // 限高区
+  }
+}
+
+enum GESAction {
+  GESActionStart      = 0;
+  GESActionStop       = 1;
+  GESActionCheck      = 2;
+}
+
+message GESGeoInfo {
+  string name_id      = 1; // Geo name id, unique
+  string name         = 2; // name of geographical point
+  // https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+  string country_code = 3; // the 2-letters country code
+  // the timezone id(see the file timeZone.txt), https://download.geonames.org/export/dump/timeZones.txt
+  string timezone_id  = 4; // the max 40-letters timezone id
+}
+
+enum GESDataLoadState {
+  GESDataLoadNone     = 0;
+  GESDataLoading      = 1; // 数据加载中
+  GESDataLoadSuccess  = 2; // 数据加载成功
+  GESDataLoadFailed   = 3; // 加载数据时失败
+  GESDataLoadNotExist = 4; // 数据文件不存在
+}
+
+enum GESDataUpgradeEvent {
+  GESDataUpgradeStart  = 0; // 升级开始
+  GESDataUpgradeDone   = 1; // 升级完成
+}
+
+message GESDataVersion {
+  uint32 major      = 1;
+  uint32 minor      = 2;
+  uint32 patch      = 3;
+}
+
+message GESDataInfo {
+  GESDataVersion version                  = 1; // 包含GES和GEO所有数据. 版本号格式: Major.Minor.Patch
+  GESDataLoadState zone_data_load_state   = 2; // 所有区域的数据
+  GESDataLoadState geo_data_load_state    = 3; // 所有用于获取国家码的地理信息的数据
+}
+
+message GESRequest {
+  GESAction action    = 1;
+  base.Vec3f velocity = 2; // Sending the value when GESAction == GESActionCheck
+}
+
+// For publish
+message GESInfo {
+  GESState state                = 1;
+  GESGeoInfo geo_info           = 2; // 当gps未就绪或未查询到数据时，此项为空
+  GESDataInfo ges_data_info     = 3; // GES模块用到的数据相关信息
+}
+
+message GESResponse {
+  bool is_ok          = 1;
+  GESInfo info        = 2;
+  float v_max         = 3; // 模长，用于约束GESRequest中velocity值，不改变方向
+}

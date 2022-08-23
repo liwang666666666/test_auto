@@ -1,0 +1,83 @@
+syntax = "proto2";
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "common_types.proto";
+
+message BleName {
+  // device name
+  required string name = 1;
+  // USB drive name
+  optional string usb_name = 2;
+}
+
+message MediaCountsResponse {
+  // media counts
+  optional MediaCountsMessage media_counts = 1;
+}
+
+message ChargerStateResponse {
+  // is charger connected to the device
+  optional bool is_charger_connected = 1;
+  // is the device fully charged
+  optional bool is_fully_charged = 2;
+}
+
+message BoardIdResponse {
+  // board ID
+  required uint32 board_id = 1;
+  // major version
+  required uint32 hardware_major_version = 2;
+  // minor version
+  optional uint32 hardware_minor_version = 3;
+}
+
+// Pairing 3PA related key exchange message
+message KeyExchangeMessage {
+  // Key exchange setup related nonce
+  required bytes nonce = 1;
+  // Key exchange setup related public key
+  required bytes public_key = 2;
+}
+
+// Pairing 3PA related signature message
+message PairingSignatureMessage {
+  // Pairing signature
+  optional bytes sig_pairing = 1;
+  // Pairing certificate chain
+  repeated string pairing_sc_cert_chain = 2;
+}
+
+// For 3PA symmetric encryption, peer verification request.
+message PeerVerificationMessage {
+  // Verification message tag
+  required bytes tag = 1;
+  // Verification message cipher text
+  required bytes ciphertext = 2;
+}
+
+message RealTimeMessage {
+  // The number of seconds since 1970.
+  required uint64 time_utc = 1;
+  // This is actually the UTC offset (e.g. -8 for Los Angeles)
+  optional int32 time_zone = 2;
+  // This is the timezone string for Android (e.g. US/Pacific)
+  optional string time_zone_str = 3;
+}
+
+message ValidatePairingRequest {
+  // Required, the unique user id.
+  optional string user_id = 1;
+}
+
+message ValidatePairingResponse {
+  // Required, indicating whether the new user_id matches the previous paired user id. The value is true if the user id matches, or there is no previous paired user.
+  optional bool result = 1;
+  // The number of media that was owned by the previous user. 
+  optional uint32 media_counts = 2;
+}
+

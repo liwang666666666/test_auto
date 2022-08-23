@@ -1,0 +1,4 @@
+// setup repeated values for protobuf generation 
+// currently at most five fc exception for app visualization 
+exception.ExceptionCollection.exceptions    max_count:5 
+exception.FlightControlException.SensorId.id   max_count: 4

@@ -1,0 +1,27 @@
+// setup repeated values in configuration.proto for easier implementation 
+// Change the maximum number in future application 
+// vector max size: 5 
+config.Vector.values 			max_count:5
+
+
+// row max number: 5
+config.Matrix.rows 			max_count:5 
+
+// max IMU number: 3
+config.SensorsConfig.imu 		max_count:3
+
+// max optflow number: 3
+config.SensorsConfig.optflow 		max_count:3
+
+// max mag number: 3
+config.SensorsConfig.mag 		max_count:3 
+
+// max control parameter set: 3
+config.FCConfig.pid			max_count:3
+
+// max servo parameter set: 3
+config.SensorsConfig.servo			max_count:3
+
+// max servo number: 6 
+config.ServoAngleParams.scale 		max_count:6
+config.ServoAngleParams.offset 		max_count:6

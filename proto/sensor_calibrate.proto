@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package sensor_calibrate;
+
+option objc_class_prefix = "SENSOR_CALIBRATE";
+option java_multiple_files = true;
+
+enum SensorID {
+    SENSOR_ID_IMU_6AXIS = 0;
+    SENSOR_ID_IMU_9AXIS = 1;
+    SENSOR_ID_MAG = 2;
+}
+
+enum CalibrateDirection {
+    // IMU
+    X_UP = 0; //SENSOR_IMU_CALIBRATE_DIRECTION_X_UP x 轴向上
+    X_DOWN = 1; //SENSOR_IMU_CALIBRATE_DIRECTION_X_DOWN x 轴向下
+    Y_UP = 2; //SENSOR_IMU_CALIBRATE_DIRECTION_Y_UP y 轴向上
+    Y_DOWN = 3; //SENSOR_IMU_CALIBRATE_DIRECTION_Y_DOWN y 轴向下
+    Z_UP = 4; //SENSOR_IMU_CALIBRATE_DIRECTION_Z_UP z 轴向上
+    Z_DOWN = 5; //SENSOR_IMU_CALIBRATE_DIRECTION_Z_DOWN z 轴向下
+    // 磁力计
+    HORIZON = 6; 
+    VERTICAL = 7;
+}
+
+message CalibrateStart {
+	CalibrateDirection direction = 1; //app can choose which direction to start to calibrate
+}
+
+message CalibrateStop {
+}
+
+message SensorCalibrateCommand {
+    SensorID id = 1;
+    oneof command {
+        CalibrateStart start = 2;
+        CalibrateStop stop = 3;
+    }
+}
+
+message CalibrateResult {
+    CalibrateDirection direction = 1;
+    bool finished = 2;
+}
+
+enum CalibrateState {
+    CALI_OK = 0;    //校准成功
+    MAG_CALI_AT_WRONG_ATTITUDE = -1; //当前飞机姿态不对,姿态对了后，才开始采集数据（只需在当前面校准）
+    MAG_CALI_COLLECT_DATA_ERROR = -2; //姿态对了后，请按照旋转轴方向不倾斜旋转一圈采集数据，否则报错（只需在当前面校准）
+    MAG_CALI_IN_ENV_INTERFERENCE = -3;  //校准过程中受到突变的磁场干扰（只需在当前面校准）
+    MAG_CALI_PLANE_WINGS_CLOSED = -4; //校准过程中飞机两翼闭合
+    MAG_CALI_PARAMS_RESULT_ABNORMAL = -5; //通过校准，得到的参数结果数据明显异常,需要重新开始校准
+    MAG_CALI_RECV_STOP_CMD = -6; //收到停止指令
+}
+
+//todo: combine with imu calibration message...
+message CalibrateInfo {
+    repeated CalibrateResult results = 1;
+    CalibrateDirection direction = 2;
+    CalibrateState state = 3; //0 for success.
+    float progress = 4;
+}
+

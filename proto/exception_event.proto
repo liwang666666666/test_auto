@@ -1,0 +1,50 @@
+syntax = "proto2";
+
+package exception_event;
+
+/*
+ * 设计目标
+ *    * 及时上报事件类信息
+ *    * 区分事件级别
+ * 定义枚举名称规则
+ *    * 见名知义
+ *    * 驼峰命名法， 词语之间无分隔符，例TakeOff
+ */
+
+enum EventId {
+  EVENT_ID_NONE                     = 0;
+  EVENT_ID_HEARTBEAT                = 1;
+  EVENT_ID_PRETAKEOFF               = 2;
+  EVENT_ID_PRETAKEOFFSTOP           = 3;
+  EVENT_ID_NORMAL_LANDING           = 4; // normal landing, including cool down stage
+  SELFCHECK_BEFORE_PRETAKEOFF       = 5; // press key event before pre take off
+}
+
+/*
+enum EventLevel {
+  EVENT_LEVEL_CRITICAL              = 1;
+  EVENT_LEVEL_ERROR                 = 2;
+  EVENT_LEVEL_WARNING               = 3;
+  EVENT_LEVEL_INFO                  = 4;
+  EVENT_LEVEL_VERBOSE               = 5;
+}
+
+message EventFCParam {
+
+}
+*/
+
+/*
+ * Event, emergency notify, in an instant
+ */
+message Event {
+  required EventId id               = 1;
+  //required EventLevel             = 2;
+  //oneof param {
+  //  EventFCParam fc                 = 3;
+  //}
+}
+
+message EventSet {
+  repeated Event events             = 1;
+}

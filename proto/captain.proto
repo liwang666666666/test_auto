@@ -1,0 +1,674 @@
+syntax = "proto3";
+
+package captain;
+
+import "trajectory.proto";
+import "common_types.proto";
+
+enum CaptainAction {
+  CaptainActionStart      = 0;
+  CaptainActionStop       = 1;
+  CaptainActionSetParam   = 2; // 用于设置某些任务的参数
+  CaptainActionTrigger    = 3; // captain决定开始或停止
+}
+
+message PreTakeOffCommand {
+  CaptainAction           action = 1;
+}
+
+message TakeOffCommand {
+  float target_height_m = 1;
+}
+
+enum LandReason {
+  LandReasonNone              = 0;
+  LandReasonInNoFlyZone       = 1; // 在禁飞区内
+  LandReasonInLimitHeightZone = 2; // 在限高区内，强制降落
+}
+
+message LandCommand {
+  CaptainAction           action = 1;
+  bool                    force_land = 2;
+  LandReason              land_reason = 3;
+}
+
+message IdleCommand {
+}
+
+message StopCommand {
+}
+
+message HoverCommand {
+}
+
+message EmergencyStopCommand {
+}
+
+message EmergencyBrakeCommand{
+}
+
+message TrajectoryCommand {
+  CaptainAction action                    = 1;
+  trajectory.TrajectoryParams params      = 2;
+}
+
+enum ManualHorizontalControlType {
+  ManualHorizontalControlTypePositionKeep = 0;
+  ManualHorizontalControlTypeVelocity     = 1;
+  ManualHorizontalControlTypeAttitude     = 2;
+  ManualHorizontalControlTypeSportVelocity= 3;
+  ManualHorizontalControlTypePosition     = 4;
+}
+
+enum ManualVerticalControlType {
+  ManualVerticalControlTypeHeightKeep     = 0;
+  ManualVerticalControlTypeVelocity       = 1;
+  ManualVerticalControlTypeThrust         = 2;
+  ManualVerticalControlTypeSportVelocity  = 3;
+  ManualVerticalControlTypePosition       = 4;
+}
+
+enum ManualYawControlType {
+  ManualYawControlTypeAngleKeep           = 0;
+  ManualYawControlTypeAngularVelocity     = 1;
+  ManualYawControlTypeAngularVelocityFiltered = 2;
+  ManualYawControlTypeAbsoluteAngle= 3;
+}
+
+message ManualControlCommand {
+  ManualHorizontalControlType horizontal_control_type = 1;
+  float x = 2;
+  float y = 3;
+
+  ManualVerticalControlType vertical_control_type = 4;
+  float z = 5;
+
+  ManualYawControlType yaw_control_type = 6;
+  float yaw = 7;
+}
+
+message FreeStyleCommand {
+}
+
+message AbortCommand {
+}
+
+message CaptainCommand {
+  oneof command_type {
+    StopCommand               stop                = 1;
+    IdleCommand               idle                = 2;
+    TakeOffCommand            take_off            = 3;
+    PreTakeOffCommand         pre_take_off        = 4;
+    LandCommand               land                = 5;
+    ManualControlCommand      manual_control      = 6;
+    EmergencyBrakeCommand     emergency_brake     = 7;
+    h130.RawManualControlCommand   raw_manual_control  = 8;
+    FreeStyleCommand          freestyle           = 9;
+    TrajectoryCommand         trajectory          = 10;
+    AbortCommand              abort               = 11; // abort the current task, flyback origin position and land
+  }
+}
+
+/* 手控 */
+enum CaptainStateFlyingManual {
+  CAPTAIN_STATE_FLYINGMANUAL                      = 0; // manual control (for debuggging)
+}
+
+/* 预起飞 */
+enum CaptainStatePreTakeOff {
+  CAPTAIN_STATE_PRE_TAKEOFF_SELFCHECKING          = 0; // self checking, for example: fc status, dependent module status, etc
+  CAPTAIN_STATE_PRE_TAKEOFF_LOCKING_TARGET        = 1; // locking target
+}
+
+/* 一键起飞 */
+enum CaptainStateTakingOff {
+  CAPTAIN_STATE_TAKING_OFF                        = 0; // 起飞过程中
+}
+
+/* 降落 */
+enum CaptainStateLanding {
+  CAPTAIN_STATE_LANDING_NORMAL                    = 0; // landing
+  CAPTAIN_STATE_LANDING_EMERGENCY                 = 1; // emergency landing
+  CAPTAIN_STATE_LANDING_PREPARING                 = 2; // waiting 5 sec before landing
+}
+
+/* 空闲 */
+enum CaptainStateIdle {
+  CAPTAIN_STATE_IDLE                              = 0; // 空闲中
+}
+
+/* Flying trajectory */
+message CaptainStateFlyingTraj {
+  enum Trajectory_Substate {
+    CAPTAIN_STATE_FLYINGTRAJ_GOING_TO_TRAJ_START_POINT  = 0; // going to start point
+    CAPTAIN_STATE_FLYINGTRAJ_TRAJECTORY_FOLLOWING       = 1; // trajectory following
+    CAPTAIN_STATE_FLYINGTRAJ_FLYING_BACK_NORMAL         = 2; // going back to start point
+    CAPTAIN_STATE_FLYINGTRAJ_FLYING_BACK_EMERGENCY      = 3; // going back to start point (emergency)
+    CAPTAIN_STATE_FLYINGTRAJ_HOVERING                   = 4; // hovering
+  }
+
+  enum Trajectory_Task {
+    CAPTAIN_TRAJECTORY_TASK_FADEAWAY              = 0; // fadeaway path task
+    CAPTAIN_TRAJECTORY_TASK_TRIPOD                = 1; // tripod task, drone not moving
+    CAPTAIN_TRAJECTORY_TASK_ORBIT                 = 2; // Orbit path task
+    CAPTAIN_TRAJECTORY_TASK_FOLLOW                = 3; // Follow task
+    CAPTAIN_TRAJECTORY_TASK_FACTORY                = 4; // Factory task
+  }
+
+  Trajectory_Substate substate = 1;
+  Trajectory_Task task = 2;
+}
+
+
+/*
+ * Captain实时上报当前所处的任务状态。
+ * 1. 一般， Captain会以任务类型归类，比如Landing状态会归到CaptainStateLand中
+ * 2. 任务状态机说明：https://zerozero.yuque.com/h130/ghrgnb/ev1onp#OPkyz
+ */
+message CaptainInfo {
+  CaptainStateTakingOff         taking_off            = 1;
+  CaptainStateLanding           landing               = 2;
+  CaptainStateIdle              idle                  = 3;
+  CaptainStateFlyingManual      flying_manual         = 4;
+  CaptainStateFlyingTraj        flying_traj           = 5;
+  CaptainStatePreTakeOff        pre_takeoff           = 6;
+}
+
+enum CaptainErrorCode {
+  CAPTAIN_ERROR_CODE_UNKNOWN                          = 0;
+  CAPTAIN_ERROR_CODE_FC_NOT_READY                     = 1; // FC位置模式异常
+  CAPTAIN_ERROR_CODE_TRACKER_NOT_VALID                = 2; // tracker无效
+  CAPTAIN_ERROR_CODE_LOW_POWER_FORCE_LANDING          = 3; // 低电量强制降落中
+}
+
+message CaptainResponse {
+  bool is_ok = 1;
+  repeated CaptainErrorCode error_codes = 2;
+}
+
+enum CaptainTaskType {
+  CAPTAIN_TASK_TYPE_DEFAULT                           = 0; // 默认
+  CAPTAIN_TASK_TYPE_IDLE                              = 1; // 怠速
+  CAPTAIN_TASK_TYPE_LANDING                           = 2; // 降落
+  CAPTAIN_TASK_TYPE_PRETAKEOFF                        = 3; // 起飞前Check
+  CAPTAIN_TASK_TYPE_TAKINGOFF                         = 4; // 起飞
+  CAPTAIN_TASK_TYPE_FLYINGMANUAL                      = 5; // 手控
+  CAPTAIN_TASK_TYPE_FLYINGTRAJ                        = 6; // 运镜
+}
+
+enum CaptainRequestId {
+  CAPTAIN_REQ_ID_GET_INFO                             = 0; // 获取Captain任务状态
+  CAPTAIN_REQ_ID_SET_CAPTURE_DURATION                 = 1;
+  CAPTAIN_REQ_ID_GET_CAPTURE_DURATION                 = 2;
+  CAPTAIN_REQ_ID_SET_VIDEO_RESOLUTION                 = 3;
+  CAPTAIN_REQ_ID_GET_VIDEO_RESOLUTION                 = 4;
+  CAPTAIN_REQ_ID_SET_PHOTO_RESOLUTION                 = 5;
+  CAPTAIN_REQ_ID_GET_PHOTO_RESOLUTION                 = 6;
+  CAPTAIN_REQ_ID_SET_FLIGHT_DISTANCE                  = 7;
+  CAPTAIN_REQ_ID_GET_FLIGHT_DISTANCE                  = 8;
+  CAPTAIN_REQ_ID_SET_CAPTURE_TYPE                     = 9;
+  CAPTAIN_REQ_ID_GET_CAPTURE_TYPE                     = 10;
+  CAPTAIN_REQ_ID_GET_REMAINING_FLIGHT_INFO            = 11;
+  CAPTAIN_REQ_ID_SET_VIDEO_FORMAT                     = 12;
+  CAPTAIN_REQ_ID_GET_VIDEO_FORMAT                     = 13;
+  CAPTAIN_REQ_ID_SET_TRACKING                         = 14;
+  CAPTAIN_REQ_ID_GET_TRACKING                         = 15;
+  CAPTAIN_REQ_ID_SET_CUSTOM_FLIGHT_MODE               = 16;
+  CAPTAIN_REQ_ID_GET_CUSTOM_FLIGHT_MODE               = 17;
+  CAPTAIN_REQ_ID_SET_TRAJECTORY_TYPE                  = 18;
+  CAPTAIN_REQ_ID_GET_TRAJECTORY_TYPE                  = 19;
+  CAPTAIN_REQ_ID_RESTORE_ALL_PARAMS                   = 20;
+  CAPTAIN_REQ_ID_GET_ALL_PARAMS                       = 21;
+  CAPTAIN_REQ_ID_SET_ANGLE_PARAMS                     = 22;
+  CAPTAIN_REQ_ID_GET_ANGLE_PARAMS                     = 23;
+  CAPTAIN_REQ_ID_SET_HEIGHT_PARAMS                    = 24;
+  CAPTAIN_REQ_ID_GET_HEIGHT_PARAMS                    = 25;
+  CAPTAIN_REQ_ID_SET_HDR_PARAMS                       = 26;
+  CAPTAIN_REQ_ID_GET_HDR_PARAMS                       = 27;
+  CAPTAIN_REQ_ID_SET_MFNR_PARAMS                      = 28;
+  CAPTAIN_REQ_ID_GET_MFNR_PARAMS                      = 29;
+  CAPTAIN_REQ_ID_SET_RAW_PARAMS                       = 30;
+  CAPTAIN_REQ_ID_GET_RAW_PARAMS                       = 31;
+  CAPTAIN_REQ_ID_SET_PREVIEW_RESOLUTION_PARAMS        = 32;
+  CAPTAIN_REQ_ID_GET_PREVIEW_RESOLUTION_PARAMS        = 33;
+  CAPTAIN_REQ_ID_SET_CAMERA_FRAMERATE_PARAMS          = 34;
+  CAPTAIN_REQ_ID_GET_CAMERA_FRAMERATE_PARAMS          = 35;
+  CAPTAIN_REQ_ID_GET_CAMERA_SETTINGS                  = 36;
+  CAPTAIN_REQ_ID_SET_CAMERA_SETTINGS                  = 37;
+}
+
+/*
+ * 和CaptainCommand都为nanomsg request/response接口请求内容
+ * 不同的是:
+ *    CaptainCommand: 要求实时性,比如手指/云台控制指令、切换任务等控制类请求
+ *    CaptainRequest: 用于其他模式请求Captain，实时性不高，请求可block的请求
+ */
+message CaptainRequest {
+  CaptainRequestId id                                     = 1;
+  oneof param {
+    h130.FlightModeConfig flight_mode_config          = 2;
+    h130.DurationParams duration_params               = 3;
+    h130.DistanceParams distance_params               = 4;
+    h130.CaptureTypeParams capture_type_params        = 5;
+    h130.VideoResolutionParams video_resolution_params= 6;
+	  h130.PhotoResolutionParams photo_resolution_params= 7;
+    h130.VideoFormatParams video_format_params        = 8;
+    h130.TrackingParams tracking_params               = 9;
+    h130.CustomFlightMode custom_flight_mode          = 10;
+    h130.TrajectoryTypeParams trajectory_type_params  = 11;
+    h130.PreviewResolutionParams preview_resolution_params = 12;
+    h130.CameraFramerateParams camera_framerate_params = 13;
+    h130.HeightParams height_params                   = 14;
+    h130.AngleParams angle_params                     = 15;
+    h130.HDRParams hdr_params                        = 16;
+    h130.MFNRParams mfnr_params                       = 17;
+    h130.RAWParams raw_params                         = 18;
+    h130.CameraSettings camera_settings               = 19;
+  }
+}
+
+message CaptainRequestAck {
+  bool is_ok                                              = 1;
+  oneof param {
+    h130.CaptainInfo info                             = 2;
+    h130.DurationParams duration_params               = 3;
+    h130.DistanceParams distance_params               = 4;
+    h130.CaptureTypeParams capture_type_params        = 5;
+    h130.RemainingFlightInfo remaining_flight_info    = 6;
+    h130.VideoResolutionParams video_resolution_params= 7;
+	  h130.PhotoResolutionParams photo_resolution_params= 8;
+    h130.VideoFormatParams video_format_params        = 9;
+    h130.TrackingParams tracking_params               = 10;
+    h130.CustomFlightMode custom_flight_mode          = 11;
+    h130.FlightSettings flight_settings               = 12;
+    h130.TrajectoryTypeParams trajectory_type_params  = 13;
+    h130.PreviewResolutionParams preview_resolution_params = 14;
+    h130.CameraFramerateParams camera_framerate_params = 15;
+    h130.HeightParams height_params                   = 16;
+    h130.AngleParams angle_params                     = 17;
+    h130.HDRParams hdr_params                        = 18;
+    h130.MFNRParams mfnr_params                       = 19;
+    h130.RAWParams raw_params                         = 20;
+    h130.CameraSettings camera_settings               = 21;
+  }
+}
+
+enum CaptainEventId {
+  CAPTAIN_EVT_ID_REMAINING_FLIGHT_INFO                = 0;
+  CAPTAIN_EVT_ID_BATTERY_STATUS                       = 1;
+}
+
+message CaptainEvent {
+  CaptainEventId id                                   = 1; // event id
+  oneof param {
+    h130.RemainingFlightInfo remaining_flight_info= 2;
+    h130.BatteryStatusResponse battery_status = 3;
+  }
+}
+
+// ########################## Captain Config ############################
+message FlyLimitRange {
+  optional float min_distance = 1;          // 最小限远值
+  optional float max_distance = 2;          // 最大限远值
+  optional float min_height = 3;            // 最小限高值
+  optional float max_height = 4;            // 最大限高值
+}
+
+message FlyLimitConfig {
+  optional FlyLimitRange app = 1;
+  optional FlyLimitRange sremoter = 2;
+  optional FlyLimitRange bremoter = 3;
+  optional FlyLimitRange app_bremoter = 4;
+}
+
+message FlyLimitParams {
+  optional float distance = 1;              // 限远值
+  optional float height = 2;                // 限高值
+}
+
+message FlyLimit {
+  optional FlyLimitParams app = 1;
+  optional FlyLimitParams sremoter = 2;
+  optional FlyLimitParams bremoter = 3;
+  optional FlyLimitParams app_bremoter = 4;
+}
+
+enum DroneHeadingType {
+  DroneHeadingHead = 0;
+  DroneHeadingBack = 1;
+}
+
+message ControlSourceParams {
+  optional float control_source_max_speed_horizon = 1;
+  optional float control_source_max_speed_vertical_up = 2;
+  optional float control_source_max_speed_vertical_down = 3;
+  optional float control_source_max_speed_yaw = 4;
+  optional float control_source_deadzone_z = 5;
+  optional float control_source_deadzone_yaw = 6;
+  optional float control_source_frequency_hz = 7;
+  optional float control_source_max_speed_gimbal_pitch = 8;
+  optional float control_source_deadzone_gimbal_pitch = 9;
+  optional float control_source_deadzone_horizontal = 10;
+  optional float control_source_deadzone_horizontal_tolerance = 11;
+}
+
+message CommandExponentialCurve {
+  optional float throttle_exp = 1;
+  optional float roll_exp = 2;
+  optional float pitch_exp = 3;
+  optional float yaw_exp = 4;
+  optional float gimbal_pitch_exp = 5;
+}
+
+message ControlCommandParams {
+  repeated ControlSourceParams control_source_params = 1;
+  optional DroneHeadingType drone_heading_type = 2;
+  optional CommandExponentialCurve command_exponential_curve = 3;
+}
+
+message CommonParams {
+  optional float yaw_control_vel_kp = 1;
+  optional float yaw_control_vel_ki = 2;
+  optional float yaw_control_vel_kd = 3;
+  optional float gimbal_control_vel_kp = 4;
+  optional float gimbal_control_vel_ki = 5;
+  optional float gimbal_control_vel_kd = 6;
+  optional float max_yaw_rate = 7;
+
+  // debug
+  optional bool debug_enable = 100; // immediate effect
+
+  // flight report
+  optional bool flight_report_enable = 120; // reboot to take effect
+}
+
+enum TrackerFusionMode {
+  TrackerFusionModeTracker = 0;
+  TrackerFusionModeCaptain = 1;
+}
+
+message TrajectoryFollowParams {
+  optional float heading_line_k1 = 1;
+  optional float heading_line_k2 = 2;
+  optional float heading_circle_k1 = 3;
+  optional float heading_circle_k2 = 4;
+  optional float default_speed = 5;
+  optional float max_target_heading_rate = 6;
+  optional float max_horizontal_acceleration = 7;
+  optional float limit_m = 11;
+
+  optional float gimbal_control_vel_kp = 30;
+  optional float gimbal_control_vel_ki = 31;
+  optional float gimbal_control_vel_kd = 32;
+
+  // general params for natural line
+  optional float general_deceleration_distance = 50;
+  optional float general_takeoff_height_offset = 51;       // increments: 0.1m, relative to the eye positiont when taking off.(-0.5m ~ 0.5m)
+
+  // flight path parameters
+  // hover
+  optional uint32 hover_duration = 100;             // increments: 1s
+  optional float hover_height_offset = 101;         // increments: 0.01m
+  optional float hover_capture_interval = 102;      // ms, The interval of time between photos
+  optional float hover_landing_hover = 103;         // ms
+  optional uint32 hover_capture_type = 104;         // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 hover_video_format = 105;         // support video format type. h130.VideoFormatParams.VideoFormat
+  optional bool hover_tracking = 106;               // Used to specify if face/body tracking is active
+  optional uint32 hover_video_resolution = 107;     // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 hover_photo_resolution = 108;     // support photot resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 hover_preview_resolution = 109;   // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   hover_hdr_enable = 110;           // enable hdr
+  optional bool hover_mfnr_enable = 111;            // enable mfnr
+  optional bool hover_raw_enable = 112;              // enable raw
+  optional uint32 hover_camera_frame_rate = 113;    // camera frame rate
+  optional uint32 hover_video_resolution_fps = 114;
+
+  // portrait
+  optional float portrait_distance = 130;           // increments: 0.1m
+  optional float portrait_outwards_speed = 131;     // increments: 0.1m/s
+  optional float portrait_return_speed = 132;       // increments: 0.1m/s
+  optional float portrait_height_offset = 133;      // increments: 0.01m
+  optional float portrait_outwards_ramp = 134;
+  optional float portrait_return_ramp = 135;
+  optional float portrait_deceleration_distance = 136;
+  optional float portrait_rest = 137;               // The length of the rest period at the apex of the flight before returning
+  optional float portrait_landing_hover = 138;      // The length of time h130 will hover in place at the end of the flight path before beginning to land on the ground
+  optional uint32 portrait_capture_type = 139;      // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 portrait_video_format = 140;      // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 portrait_video_resolution = 141;  // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 portrait_photo_resolution = 142;  // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 portrait_preview_resolution = 143;// support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   portrait_hdr_enable = 144;        // enable hdr
+  optional bool portrait_mfnr_enable = 145;         // enable mfnr
+  optional bool portrait_raw_enable = 146;          // enable raw
+  optional uint32 portrait_camera_frame_rate = 147; // camera frame rate
+  optional uint32 portrait_video_resolution_fps = 148;
+
+  // orbit
+  optional float orbit_radius = 160;                // increments: 0.1m
+  optional uint32 orbit_time_one_circle = 161;      // increments: 1s
+  optional float orbit_max_speed = 162;             // increments: 0.1m/s
+  optional uint32 orbit_circle_angle = 163;                 // increments: 0.1deg
+  optional float orbit_deceleration_distance = 164; // deprecated. replaced with orbit_decel_dist_for_xxxrad
+  optional uint32 orbit_capture_type = 165;         // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 orbit_video_format = 166;         // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 orbit_circle_num = 167;           // circle number
+  optional uint32 orbit_video_resolution = 168;     // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 orbit_photo_resolution = 169;     // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional float orbit_decel_dist_for_1p5rad = 170;// deceleration distance for 1.5m radius
+  optional float orbit_decel_dist_for_2p5rad = 171;// deceleration distance for 2.5m radius
+  optional float orbit_decel_dist_for_4p5rad = 172;// deceleration distance for 4.5m radius
+  optional uint32 orbit_preview_resolution = 173;   // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   orbit_hdr_enable = 174;           // enable hdr
+  optional bool orbit_mfnr_enable = 175;            // enable mfnr
+  optional bool orbit_raw_enable = 176;             // enable raw
+  optional uint32 orbit_camera_frame_rate = 177;    // camera frame rate
+  optional uint32 orbit_video_resolution_fps = 178;
+
+  // follow
+  optional float follow_distance = 190;             // increments: 0.1m
+  optional uint32 follow_max_time = 191;            // increments: 1s
+  optional float follow_landing_hover = 192;        // The length of time h130 will hover in place at the end of the flight path before beginning to land on the ground
+  optional uint32 follow_capture_type = 193;        // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 follow_video_format = 194;        // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 follow_video_resolution = 195;    // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 follow_photo_resolution = 196;    // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional TrackerFusionMode follow_tracker_fusion_mode = 197; // which tracker fusion mode to use
+  optional float follow_height_offset = 198;        // increments: 0.1m
+  optional uint32 follow_trajectory_type = 199;     // follow trajectory type
+  optional uint32 follow_preview_resolution = 200;  // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   follow_hdr_enable = 201;          // enable hdr
+  optional bool follow_mfnr_enable = 202;           // enable mfnr
+  optional bool follow_raw_enable = 203;            // enable raw
+  optional uint32 follow_camera_frame_rate = 204;   // camera frame rate
+  optional uint32 follow_video_resolution_fps = 205;
+
+  // overhead
+  optional float overhead_distance = 210;           // increments: 0.1m
+  optional float overhead_height_offset = 211;      // increments: 0.1m  device up distance
+  optional uint32 overhead_capture_type = 212;      // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 overhead_video_format = 213;      // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 overhead_video_resolution = 214;  // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 overhead_photo_resolution = 215;  // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 overhead_trajectory_type = 216;   // overhead trajectory type
+  optional uint32 overhead_preview_resolution = 217; // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   overhead_hdr_enable = 218;        // enable hdr
+  optional bool overhead_mfnr_enable = 219;         // enable mfnr
+  optional bool overhead_raw_enable = 220;          // enable raw
+  optional uint32 overhead_camera_frame_rate = 221; // camera frame rate
+  optional uint32 overhead_video_resolution_fps = 222;
+
+  // manual
+  // optional float manual_distance = 240;             // increments: 0.1m
+  // optional float manual_height_offset = 241;        // increments: 0.1m  device up distance
+  optional uint32 manual_capture_type = 242;        // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 manual_video_format = 243;        // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 manual_video_resolution = 244;    // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 manual_photo_resolution = 245;    // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 manual_preview_resolution = 246;  // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   manual_hdr_enable = 247;          // enable hdr
+  optional bool manual_mfnr_enable = 248;           // enable mfnr
+  optional bool manual_raw_enable = 249;            // enable raw
+  optional uint32 manual_camera_frame_rate = 250;   // camera frame rate
+  optional uint32 manual_video_resolution_fps = 251;
+
+  // factory
+  optional float factory_speed = 230;
+  optional float factory_ramp = 231;
+  optional float factory_distance = 232;
+  optional float factory_yaw_speed = 233;
+  optional float factory_height_offset = 234;
+
+  //custom
+  optional uint32 custom_flight_mode = 270;         // support custom set mode. h130.FlightModeConfig.FlightModeType
+  optional TrajectoryParamsCustom custom_params = 271;  //custom mode params
+
+  optional bool camera_params_custom = 280; //for captain support use cs config file to custom params
+}
+
+message TrajectoryParamsCustom{
+  // flight path parameters
+  // hover
+  optional uint32 hover_duration = 1;             // increments: 1s
+  optional uint32 hover_capture_type = 2;         // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 hover_video_format = 3;         // support video format type. h130.VideoFormatParams.VideoFormat
+  optional bool hover_tracking = 4;               // Used to specify if face/body tracking is active
+  optional uint32 hover_video_resolution = 5;     // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 hover_photo_resolution = 6;     // support photot resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 hover_preview_resolution = 7;   // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool hover_hdr_enable = 8;             // enable hdr
+  optional bool hover_mfnr_enable = 9;            // enable mfnr
+  optional bool hover_raw_enable = 10;           // enable raw
+  optional uint32 hover_camera_frame_rate = 11;  // camera frame rate
+  optional uint32 hover_video_resolution_fps = 12;
+
+  // portrait
+  optional float portrait_distance = 30;           // increments: 0.1m
+  optional uint32 portrait_capture_type = 31;      // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 portrait_video_format = 32;      // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 portrait_video_resolution = 33;  // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 portrait_photo_resolution = 34;  // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 portrait_preview_resolution = 35;// support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   portrait_hdr_enable = 36;        // enable hdr
+  optional bool portrait_mfnr_enable = 37;         // enable mfnr
+  optional bool portrait_raw_enable = 38;          // enable raw
+  optional uint32 portrait_camera_frame_rate = 39; // camera frame rate
+  optional uint32 portrait_video_resolution_fps = 40;
+
+  // orbit
+  optional float orbit_radius = 60;                // increments: 0.1m
+  optional uint32 orbit_circle_angle = 61;                 // increments: 0.1deg
+  optional uint32 orbit_capture_type = 62;         // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 orbit_video_format = 63;         // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 orbit_circle_num = 64;           // circle number
+  optional uint32 orbit_video_resolution = 65;     // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 orbit_photo_resolution = 66;     // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 orbit_preview_resolution = 67;   // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   orbit_hdr_enable = 68;           // enable hdr
+  optional bool orbit_mfnr_enable = 69;            // enable mfnr
+  optional bool orbit_raw_enable = 70;             // enable raw
+  optional uint32 orbit_camera_frame_rate = 71;    // camera frame rate
+  optional uint32 orbit_video_resolution_fps = 72;
+
+  // follow
+  optional float follow_distance = 90;             // increments: 0.1m
+  optional uint32 follow_max_time = 91;            // increments: 1s
+  optional uint32 follow_capture_type = 92;        // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 follow_video_format = 93;        // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 follow_video_resolution = 94;    // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 follow_photo_resolution = 95;    // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 follow_trajectory_type = 199; // follow trajectory type
+  optional uint32 follow_preview_resolution = 200; // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   follow_hdr_enable = 201;          // enable hdr
+  optional bool follow_mfnr_enable = 202;           // enable mfnr
+  optional bool follow_raw_enable = 203;            // enable raw
+  optional uint32 follow_camera_frame_rate = 204;   // camera frame rate
+  optional uint32 follow_video_resolution_fps = 205;
+
+  // overhead
+  optional float overhead_distance = 100;           // increments: 0.1m
+  optional float overhead_height_offset = 101;      // increments: 0.1m device up distance
+  optional uint32 overhead_capture_type = 102;      // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 overhead_video_format = 103;      // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 overhead_video_resolution = 104;  // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 overhead_photo_resolution = 105;  // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 overhead_trajectory_type = 106; // overhead trajectory type
+  optional uint32 overhead_preview_resolution = 107; // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   overhead_hdr_enable = 108;        // enable hdr
+  optional bool overhead_mfnr_enable = 109;         // enable mfnr
+  optional bool overhead_raw_enable = 110;          // enable raw
+  optional uint32 overhead_camera_frame_rate = 111; // camera frame rate
+  optional uint32 overhead_video_resolution_fps = 222;
+
+    // manual
+  // optional float manual_distance = 240;             // increments: 0.1m
+  // optional float manual_height_offset = 241;        // increments: 0.1m  device up distance
+  optional uint32 manual_capture_type = 242;        // support video, picture. h130.CaptureTypeParams.CaptureType
+  optional uint32 manual_video_format = 243;        // support video format type. h130.VideoFormatParams.VideoFormat
+  optional uint32 manual_video_resolution = 244;    // support video resolution. h130.VideoResolutionParams.Resolution
+  optional uint32 manual_photo_resolution = 245;    // support photo resolution. h130.PhotoResolutionParams.Resolution
+  optional uint32 manual_preview_resolution = 246;  // support preview resolution. h130.PreviewResolutionParams.Resolution
+  optional bool   manual_hdr_enable = 247;          // enable hdr
+  optional bool manual_mfnr_enable = 248;           // enable mfnr
+  optional bool manual_raw_enable = 249;            // enable raw
+  optional uint32 manual_camera_frame_rate = 250;   // camera frame rate
+  optional uint32 manual_video_resolution_fps = 251;
+
+}
+
+message GESParams {
+  // common
+  optional bool enable = 1;                           // 开启Geospatial Environment Safety System
+  optional uint32 report_state_period = 2;            // 上报状态周期, > 100ms
+
+  // limit distance/height
+  // Key由若干两字母国家码组成，以，分隔.
+  // 如果配置中没有对应国家的配置，可取用"DEFAULT"为默认的。参考：https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+  map<string, FlyLimitConfig> limit_distance_height_range = 30;   // 飞行限制取值范围配置
+  optional FlyLimit limit_distance_height = 31;       // 当前飞行限制配置
+  optional uint32 limit_distance_height_period = 32;  // 限高限远检测周期, > 20ms
+  optional float limit_distance_height_tolerance = 33;// 判断限高限远时，防止临界值，频繁切换, 米
+  optional float limit_distance_height_brake = 34;    // 提前n米刹车
+  optional float limit_distance_height_slow = 35;     // 提前n米减速
+  optional float limit_height_no_gps = 36;            // 无GPS时，限高默认值
+
+  // limit speed.
+  optional bool limit_speed_enable = 60;              // 限速开启
+  optional uint32 limit_speed_period = 61;            // 限速检测周期
+  optional float limit_speed_max_yaw = 62;            // yaw最大角速度
+  optional float limit_speed_max_wifi_manualcontrol = 63; // wifi模式手控最大速度
+  optional float limit_speed_max_normal = 64;         // 普通模式最大限速
+  optional float limit_speed_max_sport = 65;          // 运动模式最大限速
+  optional float limit_speed_max_high_temperature = 66; // 超过设定最高温度时，最大限速
+  optional float limit_speed_max_over_current = 67;   // 超过设定最大电流时，最大限速
+
+  // limit zone.
+  optional bool limit_zone_enable = 90;               // 限制区开启
+  optional uint32 limit_zone_period = 91;             // 限制区域检测周期, > 20ms
+  optional uint32 limit_zone_load_meters = 92;        // 检测并加载方圆n米内国家 > 10000m
+  optional uint32 limit_zone_detect_period = 93;      // 检测附近限制区的周期, > 1000ms
+  optional uint32 limit_zone_detect_meters = 94;      // 检测n米内限制区
+  optional float limit_zone_tolerance = 95;           // 判断限制区距离，触发一些事件时，防止临界值频繁切换, 米
+  optional float limit_zone_brake = 96;               // 提前n米刹车
+  optional float limit_zone_slow = 97;                // 提前n米减速
+}
+
+enum ReturnPositionType {
+  ReturnPositionTakeOff = 0;
+  ReturnPositionCurrentPosition = 1;
+}
+
+message ReturnParams {
+  optional float return_height = 1;
+  optional ReturnPositionType return_position_type = 2;
+  optional float return_height_lower_bound = 3;
+  optional float default_return_speed = 4;
+}
+
+message CaptainConfig {
+  optional CommonParams common_params = 1;
+  optional ReturnParams return_params = 2;
+  optional ControlCommandParams control_command_params = 3;
+  optional TrajectoryFollowParams trajectory_follow_params = 4;
+  optional GESParams ges_params = 5;
+}

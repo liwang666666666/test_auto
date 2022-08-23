@@ -1,0 +1,137 @@
+syntax = "proto2";
+
+package h130;
+
+option objc_class_prefix = "H130PB";
+option java_package = "cn.zerozero.proto.h130";
+option java_multiple_files = true;
+
+import "common_types.proto";
+import "media_file_metadata_types.proto";
+
+// Media type
+enum MediaType {
+    // Unknown type
+    UNSET = 0;
+    // METADATA
+    METADATA = 1;
+    // THUMBNAIL
+    THUMBNAIL = 2;
+    // VIDEO
+    VIDEO = 3;
+    // IMAGE
+    PICTURE = 4;
+    // IMU
+    IMU_DATA = 5;
+    // ANIMATED THUMBNAIL
+    ANIMATED_THUMBNAIL = 6;
+}
+
+message MediaTypeAndSize {
+    // Media type of the requested media file. (E.g: SD_VIDEO)
+    required MediaType type = 1;
+    // The local file size of the specified (uuid:type)
+    required uint32 size = 2;
+}
+
+message MediaMetadata {
+    // The UUID of the media metadata
+    required string uuid = 1;
+    // Type & size info
+    repeated MediaTypeAndSize media = 2;
+    // media file metadata
+    optional MediaFileMetadata metadata = 3;
+}
+
+message MediaFileTransferRequest {
+    // The uuid of the requested media file. (E.g: '1CA5E92595BE601E')
+    required string uuid = 1;
+    // The media type of the requested media file. (E.g: SD_VIDEO)
+    required MediaType type = 2;
+    // Portion of media file to transfer. If not specified, entire file is sent.
+    optional Range range = 3;
+}
+
+message MediaFileDeletionRequest {
+    // The UUID of the media file to be deleted or mark as transferred. (E.g: '1CA5E92595BE601E'). Required.
+    required string uuid = 1;
+}
+
+message MediaFileMarkTransferredRequest {
+    // The UUID of the media file to mark as transferred
+    required string uuid = 1;
+}
+
+message MediaRequest {
+    // Possible request types
+    enum MediaRequestType {
+        // Unknown type
+        UNSET = 0;
+        // Request available media
+        LIST_AVAILABLE_MEDIA = 1;
+        // Request must contain media_file_transfer_request
+        GET_MEDIA_FILE = 2;
+        // Request must contain media_file_deletion_request
+        DELETE_MEDIA_FILE = 3;
+        // No other field is required
+        START_AS_NEED_DELETION = 4;
+        // Issued by client when transfer is completed
+        MARK_TRANSFERRED = 5;
+        // Get media files metadata by session id
+        GET_MEDIA_FILES_BY_SESSION_ID = 6;
+        // Get all new media files
+        GET_NEW_MEDIA_FILES = 7;
+    }
+
+    // Request type
+    required MediaRequestType type = 1;
+    // Request a specific media file
+    optional MediaFileTransferRequest media_file_transfer_request = 2;
+    // Request deletion of a specific file
+    optional MediaFileDeletionRequest media_file_deletion_request = 3;
+    // Mark a specific file as transferred
+    optional MediaFileMarkTransferredRequest media_file_mark_transferred_request = 4;
+    // The preview session id
+    // 一般用于获取此session id下创建的媒体文件
+    optional string session_id = 5;
+}
+
+message MediaData {
+    // The uuid of the requested media file. (E.g: '1CA5E92595BE601E')
+    required string uuid = 1;
+    // The media type of the requested media file. (E.g: SD_VIDEO)
+    required MediaType type = 2;
+    // The requested range for the media file.
+    optional Range requested_range = 3;
+    // Portion of media file the data field corresponds to
+    required Range actual_range = 4;
+    // The binary data that for the given request
+    required bytes data = 5;
+}
+
+message MediaResponse {
+    // Response from LIST_AVAILABLE_MEDIA, GET_MEDIA_FILES_BY_SESSION_ID, GET_NEW_MEDIA_FILES request.
+    repeated MediaMetadata available_media = 1;
+    // Response from GET_MEDIA_FILE request if MediaType is not METADATA.
+    optional MediaData media_data = 2;
+    // Response from GET_MEDIA_FILE request if MediaType is METADATA.
+    optional MediaFileMetadata metadata = 3;
+}
+
+message GetFileRequest {
+    // Uri to fetch the file on device
+    optional string file_identifier = 1;
+    // Portion of file to transfer. If not specified, entire file is sent.
+    optional Range range = 2;
+}
+
+message GetFileResponse {
+    // Uri for the requested file
+    optional string file_identifier = 1;
+    // The requested range for the file.
+    optional Range requested_range = 3;
+    // Portion of file the data field corresponds to
+    optional Range actual_range = 4;
+    // The binary data for the given request
+    optional bytes data = 5;
+}

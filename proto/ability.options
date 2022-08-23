@@ -1,0 +1,2 @@
+// at most 3 exceptions that could be added to a specific ability 
+ability.Ability.exceptions  max_count:3 
