@@ -1,5 +1,5 @@
-import sys
-sys.path.append(sys.path[0]+'\..')
+import sys 
+sys.path.append("..")
 import os
 import asyncio
 import async_timeout
