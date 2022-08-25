@@ -3,7 +3,6 @@ import asyncio
 import async_timeout
 import binascii
 import sys
-sys.path.append('..')
 sys.path.append(os.getcwd() + '/proto_py')
 from proto_py import service_pb2
 
