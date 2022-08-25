@@ -10,11 +10,6 @@ from bleak import discover
 from bleak import BleakClient
 from termcolor import colored
 from rpc_request import H130_Test, Get_Parse
-# os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# sys.path.append("/Users/zerozero/.jenkins/workspace/ota-test/ble.py")
-curPath=os.path.abspath(os.path.dirname(__file__))
-rootPath=os.path.split(curPath)[0]
-sys.path.append(rootPath)
 from bt_service import BtSevice
 
 
