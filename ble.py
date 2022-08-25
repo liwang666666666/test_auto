@@ -1,3 +1,5 @@
+import sys
+sys.path.append(r"/Users/zerozero/.jenkins/workspace/ota-test/ble.py")
 import os
 import asyncio
 import async_timeout
