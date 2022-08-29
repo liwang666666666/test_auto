@@ -1,6 +1,6 @@
 import sys 
 import os
-sys.path.append('/Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages')
+sys.path.append('/usr/bin/python3')
 import asyncio
 import async_timeout
 import binascii
