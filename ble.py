@@ -2,6 +2,7 @@ import sys
 sys.path.append(sys.path[0]+'\..')
 import os
 import asyncio
+sys.path.append(' /Library/Frameworks/Python.framework/Versions/3.10/lib/python3.10/site-packages')
 import async_timeout
 import binascii
 import sys
