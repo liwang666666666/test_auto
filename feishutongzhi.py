@@ -12,7 +12,7 @@ JOB_URL = sys.argv[1]
 JOB_NAME = sys.argv[2]
 BUILD_NUMBER = sys.argv[3]
 currenttime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-url = 'https://open.feishu.cn/open-apis/bot/v2/hook/446108d8-40a4-49bc-891a-60136028ac68'
+url = 'https://open.feishu.cn/open-apis/bot/v2/hook/24ba9aee-579e-4db4-94de-655fdf3106af'
 method = 'post'
 headers = {
     'Content-Type': 'application/json'
