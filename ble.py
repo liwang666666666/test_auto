@@ -1,11 +1,12 @@
 import sys 
 import os
-sys.path.append('/usr/bin/python3')
+# sys.path.append('/usr/bin/python3')
 import asyncio
 import async_timeout
 import binascii
 import sys
 sys.path.append(os.getcwd() + '/proto_py')
+sys.path.append("/Users/zerozero/.jenkins/workspace/ota-test")
 from proto_py import service_pb2
 
 from bleak import discover
