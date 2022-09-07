@@ -35,6 +35,14 @@ def test_demo(flash,update):
     if i.endswith(".zip"):  # 判断是否是.zip文件
         os.rename(os.path.join(path, i), os.path.join(path, new_name))
     print('升级包改名成功')
+    
+    otapackage = './ota/update.zip'
+    sz = os.path.getsize(otapackage)
+    print(sz)
+    if sz > 100000000:
+        print('此次为全量包ota测试')
+    else:
+        print('此次为差量包ota测试')
 
     path = './liwang/'
     L = []
